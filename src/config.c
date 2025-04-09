@@ -1,0 +1,307 @@
+//
+// Created by Anshul Gupta on 4/6/25.
+//
+
+#include "config.h"
+
+#include <ctype.h>
+#include <fcntl.h>
+#include <grp.h>
+#include <pwd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+const char *config_locations[] = {
+	"/etc/github_mirror/config.ini",
+	"/usr/local/etc/github_mirror/config.ini",
+	"/usr/local/github_mirror/config.ini",
+	"config.ini",
+	NULL,
+};
+
+enum config_section {
+	section_none,
+	section_github,
+	section_git,
+};
+
+
+static char *file_read(const char *path, size_t *size_out)
+{
+	char *contents = NULL;
+
+	// Open the file for reading
+	const int fd = open(path, O_RDONLY);
+	if (fd < 0) {
+		perror("Error reading config file");
+		return NULL;
+	}
+
+	// Stat the file to get its size
+	struct stat st;
+	if (fstat(fd, &st) < 0) {
+		perror("Error getting file size");
+		goto end;
+	}
+
+	// Get the size of the file
+	const size_t size = st.st_size;
+	if (size == 0) {
+		fprintf(stderr, "Error reading config file: file is empty\n");
+		goto end;
+	}
+
+	// Map the file into memory
+	contents = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+	if (contents == MAP_FAILED) {
+		perror("Error reading config file");
+		goto end;
+	}
+
+	// Output file size
+	if (size_out)
+		*size_out = size;
+
+end:
+	close(fd);
+	return contents;
+}
+
+static char *trim(char *start, char *end)
+{
+	while (start < end && isspace(*start))
+		start++;
+	while (end > start && isspace(*(end - 1)))
+		end--;
+	*end = '\0';
+	return start;
+}
+
+static int parse_line_inner(struct config *cfg, enum config_section section,
+			    char *key, char *value)
+{
+	char *endptr;
+	struct passwd *pw;
+	struct group *gr;
+
+	switch (section) {
+	case section_none:
+		fprintf(stderr,
+			"Unexpected key-value pair outside of section: %s=%s\n",
+			key, value);
+		return -1;
+	case section_github:
+		if (!strcmp(key, "endpoint"))
+			cfg->endpoint = value;
+		else if (!strcmp(key, "token"))
+			cfg->token = value;
+		else if (!strcmp(key, "user_agent"))
+			cfg->user_agent = value;
+		else if (!strcmp(key, "owner"))
+			cfg->owner = value;
+		else {
+			fprintf(stderr,
+				"Error parsing config file: unknown key: %s\n",
+				key);
+			return -1;
+		}
+		break;
+	case section_git:
+		if (!strcmp(key, "base"))
+			cfg->git_base = value;
+		else if (!strcmp(key, "owner")) {
+			// If the value is a number, set the owner to that
+			// number
+			cfg->git_owner = strtol(value, &endptr, 10);
+			if (*endptr == '\0')
+				return 0;
+
+			// Otherwise, convert the string into a uid
+			if (!((pw = getpwnam(value)))) {
+				fprintf(stderr,
+					"Error parsing config file: unknown "
+					"user: %s\n",
+					value);
+				return -1;
+			}
+			cfg->git_owner = pw->pw_uid;
+		} else if (!strcmp(key, "group")) {
+			// If the value is a number, set the group to that
+			// number
+			cfg->git_group = strtol(value, &endptr, 10);
+			if (*endptr == '\0')
+				return 0;
+
+			// Otherwise, convert the string into a gid
+			if (!((gr = getgrnam(value)))) {
+				fprintf(stderr,
+					"Error parsing config file: unknown "
+					"group: %s\n",
+					value);
+				return -1;
+			}
+			cfg->git_group = gr->gr_gid;
+		} else {
+			fprintf(stderr,
+				"Error parsing config file: unknown key: %s\n",
+				key);
+			return -1;
+		}
+		break;
+	}
+	return 0;
+}
+
+static int parse_line(struct config *cfg, char *line,
+		      enum config_section *section)
+{
+	switch (*line) {
+	case ';':
+	case '#':
+	case '\0':
+		// Ignore comments and empty lines
+		return 0;
+	case '[': {
+		// Handle section headers
+		char *close = strchr(line, ']');
+		if (!close) {
+			fprintf(stderr,
+				"Error parsing config file: invalid section "
+				"header: %s\n",
+				line);
+			return -1;
+		}
+		*close = '\0';
+		char *section_name = trim(line + 1, close);
+		if (!strcmp(section_name, "github"))
+			*section = section_github;
+		else if (!strcmp(section_name, "git"))
+			*section = section_git;
+		else {
+			fprintf(stderr,
+				"Error parsing config file: unknown section: "
+				"%s\n",
+				section_name);
+			return -1;
+		}
+		return 0;
+	}
+	default: {
+		// Handle key-value pairs
+		char *line_end = line + strlen(line);
+		char *equals = strchr(line, '=');
+		if (!equals) {
+			fprintf(stderr,
+				"Error parsing config file: invalid line: %s\n",
+				line);
+			return -1;
+		}
+		*equals = '\0';
+		char *key = trim(line, equals);
+		char *value = trim(equals + 1, line_end);
+		return parse_line_inner(cfg, *section, key, value);
+	}
+	}
+}
+
+static int config_parse(struct config *cfg)
+{
+	char *ptr = cfg->contents;
+	char *end = cfg->contents + cfg->contents_len;
+	enum config_section section = section_none;
+
+	while (ptr < end) {
+		// Find the end of the line
+		char *newline = memchr(ptr, '\n', end - ptr);
+		char *line_end = newline ? newline : end;
+
+		// Handle line endings
+		char *actual_end = line_end;
+		if (actual_end > ptr && *(actual_end - 1) == '\r')
+			actual_end--;
+
+		// Null-terminate the line
+		if (line_end < end)
+			*line_end = '\0';
+
+		// Trim whitespace
+		char *line = trim(ptr, actual_end);
+
+		// Parse the line
+		if (parse_line(cfg, line, &section) < 0)
+			return -1;
+
+		// Move to the next line
+		ptr = newline ? newline + 1 : end;
+	}
+
+	return 0;
+}
+
+static void config_defaults(struct config *cfg)
+{
+	cfg->endpoint = GH_DEFAULT_ENDPOINT;
+	cfg->user_agent = GH_DEFAULT_USER_AGENT;
+	cfg->git_base = "/srv/git";
+	cfg->git_owner = getuid();
+	cfg->git_group = getgid();
+}
+
+static int config_validate(const struct config *cfg)
+{
+	if (!cfg->token) {
+		fprintf(stderr,
+			"Error: missing required field: github.token\n");
+		return -1;
+	}
+	if (!cfg->owner) {
+		fprintf(stderr,
+			"Error: missing required field: github.owner\n");
+		return -1;
+	}
+	return 0;
+}
+
+
+struct config *config_read(const char *path)
+{
+	struct config *cfg = calloc(1, sizeof(*cfg));
+	if (!cfg) {
+		perror("error allocating config");
+		return NULL;
+	}
+	config_defaults(cfg);
+
+	// Read the config file
+	cfg->contents = file_read(path, &cfg->contents_len);
+	if (!cfg->contents)
+		goto fail;
+
+	// Parse the config file
+	if (config_parse(cfg) < 0)
+		goto fail2;
+
+	// Validate the config file
+	if (config_validate(cfg) < 0)
+		goto fail2;
+
+	return cfg;
+
+fail2:
+	munmap(cfg->contents, cfg->contents_len);
+fail:
+	free(cfg);
+	return NULL;
+}
+
+void config_free(struct config *config)
+{
+	if (!config || !config->contents)
+		return;
+	munmap(config->contents, config->contents_len);
+	free(config);
+}

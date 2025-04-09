@@ -1,0 +1,15 @@
+query GetUserRepos($username: String!, $after: String) {
+    repositoryOwner(login: $username) {
+        repositories(first: 100, after: $after, ownerAffiliations: OWNER) {
+            nodes {
+                name
+                url
+                isFork
+            }
+            pageInfo {
+                hasNextPage
+                endCursor
+            }
+        }
+    }
+}
