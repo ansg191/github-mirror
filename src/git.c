@@ -157,9 +157,11 @@ static int contains_mirror(const char *path)
  * Creates a mirror of the git repository at the specified path.
  * @param path Full path to the git repository
  * @param ctx Context containing the repository information
+ * @param quiet Suppress output if non-zero
  * @return 0 on success, -1 on error
  */
-static int create_mirror(const char *path, const struct repo_ctx *ctx)
+static int create_mirror(const char *path, const struct repo_ctx *ctx,
+			 const int quiet)
 {
 	const pid_t pid = fork();
 	if (pid < 0) {
@@ -174,10 +176,17 @@ static int create_mirror(const char *path, const struct repo_ctx *ctx)
 					 ctx->cfg->token);
 
 		// Run git
-		char *args[] = {
-				"git", "clone",	      "--mirror",
-				url,   (char *) path, NULL,
-		};
+		char *args[7];
+		int i = 0;
+		args[i++] = "git";
+		args[i++] = "clone";
+		args[i++] = "--mirror";
+		if (quiet)
+			args[i++] = "--quiet";
+		args[i++] = url;
+		args[i++] = (char *) path;
+		args[i] = NULL;
+
 		execvp("git", args);
 		perror("execvp");
 		_exit(127); // execvp only returns on error
@@ -234,9 +243,10 @@ static int create_git_path(const struct repo_ctx *ctx)
 /**
  * Updates the git repository at the specified path from the remote.
  * @param path Full path to the git repository
+ * @param quiet Suppress output if non-zero
  * @return 0 on success, -1 on error
  */
-static int update_mirror(const char *path)
+static int update_mirror(const char *path, int quiet)
 {
 	const pid_t pid = fork();
 	if (pid < 0) {
@@ -246,10 +256,19 @@ static int update_mirror(const char *path)
 
 	if (pid == 0) {
 		// Child process
-		char *args[] = {
-				"git",	  "--git-dir", (char *) path, "remote",
-				"update", "--prune",   NULL,
-		};
+		char *args[9];
+		int i = 0;
+		args[i++] = "git";
+		args[i++] = "--git-dir";
+		args[i++] = (char *) path;
+		args[i++] = "fetch";
+		args[i++] = "--prune";
+		if (quiet)
+			args[i++] = "--quiet";
+		args[i++] = "--all";
+		args[i++] = "--tags";
+		args[i] = NULL;
+
 		execvp("git", args);
 		perror("execvp");
 		_exit(127); // execvp only returns on error
@@ -271,7 +290,7 @@ static int update_mirror(const char *path)
 	return -1; // Error occurred
 }
 
-int git_mirror_repo(const struct repo_ctx *ctx)
+int git_mirror_repo(const struct repo_ctx *ctx, int quiet)
 {
 	int ret = 0;
 	char *path = get_git_path(ctx->git_base, ctx->cfg->owner, ctx->name);
@@ -283,8 +302,9 @@ int git_mirror_repo(const struct repo_ctx *ctx)
 	// Check whether repo exists
 	if (contains_mirror(path)) {
 		// Repo exists, so we can just update it
-		printf("Repo already exists, updating...\n");
-		if (update_mirror(path) == -1) {
+		if (!quiet)
+			printf("Repo already exists, updating...\n");
+		if (update_mirror(path, quiet) == -1) {
 			perror("update_mirror");
 			ret = -1;
 			goto end;
@@ -293,13 +313,14 @@ int git_mirror_repo(const struct repo_ctx *ctx)
 	}
 
 	// Repo does not exist, so we need to clone it
-	printf("Repo does not exist, cloning...\n");
+	if (!quiet)
+		printf("Repo does not exist, cloning...\n");
 	if (create_git_path(ctx) == -1) {
 		perror("create_git_path");
 		ret = -1;
 		goto end;
 	}
-	if (create_mirror(path, ctx) == -1) {
+	if (create_mirror(path, ctx, quiet) == -1) {
 		perror("create_mirror");
 		ret = -1;
 	}

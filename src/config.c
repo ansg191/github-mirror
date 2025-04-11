@@ -300,7 +300,11 @@ static int config_parse(struct config *cfg)
 	return 0;
 }
 
-static void config_defaults(struct config *cfg) { cfg->git_base = "/srv/git"; }
+static void config_defaults(struct config *cfg)
+{
+	cfg->quiet = 0;
+	cfg->git_base = "/srv/git";
+}
 
 static int config_validate(const struct config *cfg)
 {

@@ -36,6 +36,9 @@ struct config {
 	char *contents;
 	size_t contents_len;
 
+	/// Quiet mode
+	int quiet;
+
 	/// Repo owners to mirror
 	struct github_cfg *head;
 

@@ -19,7 +19,7 @@ struct repo_ctx {
 	const char *username;
 };
 
-int git_mirror_repo(const struct repo_ctx *ctx);
+int git_mirror_repo(const struct repo_ctx *ctx, int quiet);
 
 
 #endif // GIT_H

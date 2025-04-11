@@ -14,14 +14,16 @@ static int load_config(int argc, char **argv, struct config **cfg_out)
 {
 	int opt, opt_idx = 0;
 	size_t i;
+	int quiet = 0;
 	char *cfg_path = NULL;
 
 	static struct option long_options[] = {
 			{"config", required_argument, 0, 'c'},
 			{"help", no_argument, 0, 'h'},
+			{"quiet", no_argument, 0, 'q'},
 			{0, 0, 0, 0}};
 
-	while ((opt = getopt_long(argc, argv, "C:c:h", long_options,
+	while ((opt = getopt_long(argc, argv, "C:c:h:q", long_options,
 				  &opt_idx)) != -1) {
 		switch (opt) {
 		case 'C':
@@ -33,10 +35,14 @@ static int load_config(int argc, char **argv, struct config **cfg_out)
 				"Usage: %s [--config <file>] [--help]\n",
 				argv[0]);
 			return 0;
+		case 'q':
+			quiet = 1;
+			break;
 		default:
 			fprintf(stderr, "Unknown option: %c\n", opt);
 			fprintf(stderr,
-				"Usage: %s [--config <file>] [--help]\n",
+				"Usage: %s [--config <file>] [--quiet] "
+				"[--help]\n",
 				argv[0]);
 			return 1;
 		}
@@ -45,17 +51,24 @@ static int load_config(int argc, char **argv, struct config **cfg_out)
 	// Config file given, use it
 	if (cfg_path) {
 		*cfg_out = config_read(cfg_path);
-		return *cfg_out == NULL;
+		if (*cfg_out) {
+			(*cfg_out)->quiet = quiet;
+			return 0;
+		}
+		return 1;
 	}
 
 	// No config file given, try the default locations
 	for (i = 0; config_locations[i]; i++) {
-		fprintf(stderr, "Trying config file: %s\n",
-			config_locations[i]);
+		if (!quiet)
+			fprintf(stderr, "Trying config file: %s\n",
+				config_locations[i]);
 		*cfg_out = config_read(config_locations[i]);
 		if (*cfg_out) {
-			fprintf(stderr, "Using config file: %s\n",
-				config_locations[i]);
+			if (!quiet)
+				fprintf(stderr, "Using config file: %s\n",
+					config_locations[i]);
+			(*cfg_out)->quiet = quiet;
 			return 0;
 		}
 	}
@@ -63,7 +76,8 @@ static int load_config(int argc, char **argv, struct config **cfg_out)
 	return 1;
 }
 
-static int mirror_owner(const char *git_base, const struct github_cfg *cfg)
+static int mirror_owner(const char *git_base, const struct github_cfg *cfg,
+			int quiet)
 {
 	const struct github_ctx ctx = {
 			.endpoint = cfg->endpoint,
@@ -89,13 +103,15 @@ static int mirror_owner(const char *git_base, const struct github_cfg *cfg)
 
 		for (size_t i = 0; i < res.repos_len; i++) {
 			if (cfg->skip_forks && res.repos[i].is_fork) {
-				fprintf(stderr, "Skipping forked repo: %s\n",
-					res.repos[i].name);
+				if (!quiet)
+					printf("Skipping forked repo: %s\n",
+					       res.repos[i].name);
 				continue;
 			}
 
-			printf("Repo: %s\t%s\n", res.repos[i].name,
-			       res.repos[i].url);
+			if (!quiet)
+				printf("Repo: %s\t%s\n", res.repos[i].name,
+				       res.repos[i].url);
 
 			const struct repo_ctx repo = {
 					.git_base = git_base,
@@ -104,7 +120,7 @@ static int mirror_owner(const char *git_base, const struct github_cfg *cfg)
 					.url = res.repos[i].url,
 					.username = login,
 			};
-			if (git_mirror_repo(&repo) != 0) {
+			if (git_mirror_repo(&repo, quiet) != 0) {
 				fprintf(stderr, "Failed to mirror repo\n");
 				status = -1;
 				break;
@@ -140,10 +156,11 @@ int main(int argc, char **argv)
 	}
 
 	int status = 0;
-	struct github_cfg *owner = cfg->head;
+	const struct github_cfg *owner = cfg->head;
 	while (owner) {
-		printf("Mirroring owner: %s\n", owner->owner);
-		if (mirror_owner(cfg->git_base, owner)) {
+		if (!cfg->quiet)
+			printf("Mirroring owner: %s\n", owner->owner);
+		if (mirror_owner(cfg->git_base, owner, cfg->quiet)) {
 			fprintf(stderr, "Failed to mirror owner: %s\n",
 				owner->owner);
 			status = 1;

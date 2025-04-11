@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <sys/errno.h>
+#include <sys/fcntl.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -24,6 +25,20 @@ static int has_git(void)
 
 	if (pid == 0) {
 		// Child process
+
+		// Redirect stdout to /dev/null
+		const int devnull = open("/dev/null", O_WRONLY);
+		if (devnull == -1) {
+			perror("open");
+			_exit(127);
+		}
+		if (dup2(devnull, STDOUT_FILENO) == -1) {
+			perror("dup2");
+			close(devnull);
+			_exit(127);
+		}
+		close(devnull);
+
 		char *args[] = {"git", "--version", NULL};
 		execvp("git", args);
 		_exit(127); // execvp only returns on error
