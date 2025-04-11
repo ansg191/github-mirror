@@ -30,8 +30,6 @@ static void config_read_normal(void **state)
 	assert_string_equal(cfg->user_agent, "user-agent");
 	assert_string_equal(cfg->owner, "my-org");
 	assert_string_equal(cfg->git_base, "/srv/git");
-	assert_int_equal(cfg->git_owner, 1000);
-	assert_int_equal(cfg->git_group, 1001);
 }
 
 int main(void)

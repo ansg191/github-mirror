@@ -14,6 +14,7 @@ FetchContent_Declare(
         GIT_TAG v1.7.18
         EXCLUDE_FROM_ALL
 )
+set(ENABLE_CJSON_TEST OFF CACHE BOOL "Enable cJSON tests" FORCE)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries" FORCE)
 FetchContent_MakeAvailable(cjson)
 
