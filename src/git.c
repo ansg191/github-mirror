@@ -94,37 +94,11 @@ static char *add_url_auth(const char *url, const char *user, const char *token)
 }
 
 /**
- * Drops the permissions of the current process to the specified user and group.
- * @param ctx Repository context
- * @return 0 on success, -1 on error
- */
-static int drop_perms(const struct repo_ctx *ctx)
-{
-	// Drop supplementary groups
-	if (setgroups(0, NULL) != 0) {
-		perror("setgroups");
-		return -1;
-	}
-	// Set gid
-	if (setgid(ctx->cfg->git_group) == -1) {
-		perror("setgid");
-		return -1;
-	}
-	// Set uid
-	if (setuid(ctx->cfg->git_owner) == -1) {
-		perror("setuid");
-		return -1;
-	}
-	return 0;
-}
-
-/**
  * Checks if the git repository at the specified path is a mirror.
  * @param path Path to the git repository
- * @param ctx Repository context
  * @return 1 if the repository is a mirror, 0 if not
  */
-static int contains_mirror(const char *path, const struct repo_ctx *ctx)
+static int contains_mirror(const char *path)
 {
 	const pid_t pid = fork();
 	if (pid < 0) {
@@ -148,9 +122,7 @@ static int contains_mirror(const char *path, const struct repo_ctx *ctx)
 		}
 		close(devnull);
 
-		// Change uid and gid to the user specified in the config
-		if (drop_perms(ctx))
-			_exit(127);
+		// Run git
 		char *args[] = {
 				"git",	  "--git-dir", (char *) path,
 				"config", "--get",     "remote.origin.mirror",
@@ -201,10 +173,7 @@ static int create_mirror(const char *path, const struct repo_ctx *ctx)
 		char *url = add_url_auth(ctx->url, ctx->username,
 					 ctx->cfg->token);
 
-		// Change uid and gid to the user specified in the config
-		if (drop_perms(ctx))
-			_exit(127);
-
+		// Run git
 		char *args[] = {
 				"git", "clone",	      "--mirror",
 				url,   (char *) path, NULL,
@@ -247,12 +216,6 @@ static int create_git_path(const struct repo_ctx *ctx)
 		free(owner_path);
 		return -1;
 	}
-	// Set the permissions of the owner directory to 0775
-	if (chmod(owner_path, 0775) == -1) {
-		perror("chmod");
-		free(owner_path);
-		return -1;
-	}
 	free(owner_path);
 
 	// Create repo directory if it doesn't exist
@@ -265,14 +228,6 @@ static int create_git_path(const struct repo_ctx *ctx)
 		free(repo_path);
 		return -1;
 	}
-
-	// Chown the repo directory to the specified user and group
-	if (chown(repo_path, ctx->cfg->git_owner, ctx->cfg->git_group) == -1) {
-		perror("chown");
-		free(repo_path);
-		return -1;
-	}
-
 	free(repo_path);
 	return 0;
 }
@@ -280,10 +235,9 @@ static int create_git_path(const struct repo_ctx *ctx)
 /**
  * Updates the git repository at the specified path from the remote.
  * @param path Full path to the git repository
- * @param ctx Context containing the repository information
  * @return 0 on success, -1 on error
  */
-static int update_mirror(const char *path, const struct repo_ctx *ctx)
+static int update_mirror(const char *path)
 {
 	const pid_t pid = fork();
 	if (pid < 0) {
@@ -293,10 +247,6 @@ static int update_mirror(const char *path, const struct repo_ctx *ctx)
 
 	if (pid == 0) {
 		// Child process
-		// Change uid and gid to the user specified in the config
-		if (drop_perms(ctx))
-			_exit(127);
-
 		char *args[] = {
 				"git",	  "--git-dir", (char *) path, "remote",
 				"update", "--prune",   NULL,
@@ -324,6 +274,7 @@ static int update_mirror(const char *path, const struct repo_ctx *ctx)
 
 int git_mirror_repo(const struct repo_ctx *ctx)
 {
+	int ret = 0;
 	char *path = get_git_path(ctx->cfg->git_base, ctx->cfg->owner,
 				  ctx->name);
 	if (!path) {
@@ -332,31 +283,30 @@ int git_mirror_repo(const struct repo_ctx *ctx)
 	}
 
 	// Check whether repo exists
-	if (contains_mirror(path, ctx)) {
+	if (contains_mirror(path)) {
 		// Repo exists, so we can just update it
 		printf("Repo already exists, updating...\n");
-		if (update_mirror(path, ctx) == -1) {
+		if (update_mirror(path) == -1) {
 			perror("update_mirror");
-			free(path);
-			return -1;
+			ret = -1;
+			goto end;
 		}
-		free(path);
-		return 0;
+		goto end;
 	}
 
 	// Repo does not exist, so we need to clone it
 	printf("Repo does not exist, cloning...\n");
 	if (create_git_path(ctx) == -1) {
 		perror("create_git_path");
-		free(path);
-		return -1;
+		ret = -1;
+		goto end;
 	}
 	if (create_mirror(path, ctx) == -1) {
 		perror("create_mirror");
-		free(path);
-		return -1;
+		ret = -1;
 	}
 
+end:
 	free(path);
-	return 0;
+	return ret;
 }

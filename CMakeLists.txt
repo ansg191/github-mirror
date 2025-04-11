@@ -20,11 +20,6 @@ FetchContent_MakeAvailable(cjson)
 # CMocka
 find_package(cmocka REQUIRED)
 
-# Libcap (only when building for Linux)
-if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    find_library(CAP_LIBRARY cap REQUIRED)
-endif ()
-
 # Python
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
@@ -76,12 +71,6 @@ target_include_directories(github_mirror PRIVATE ${cjson_SOURCE_DIR} ${CMAKE_CUR
 add_dependencies(github_mirror generate_graphql_headers)
 install(TARGETS github_mirror DESTINATION bin)
 
-# Libcap (only when building for Linux)
-if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    target_link_libraries(github_mirror PRIVATE ${CAP_LIBRARY})
-    target_include_directories(github_mirror PRIVATE /usr/include)
-endif ()
-
 # Compile Options
 target_compile_options(github_mirror PRIVATE
         -Wall
@@ -125,7 +114,7 @@ set(CPACK_PACKAGE_NAME "github_mirror")
 set(CPACK_PACKAGE_VERSION "0.1.0")
 set(CPACK_PACKAGE_CONTACT "ansg191@anshulg.com")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Anshul Gupta")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.28), libcurl4 (>= 7.64), libcap2 (>= 1.24)")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.28), libcurl4 (>= 7.64)")
 
 set(CPACK_GENERATOR "DEB")
 include(CPack)

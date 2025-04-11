@@ -6,7 +6,6 @@
 #define CONFIG_H
 
 #include <stdlib.h>
-#include <sys/types.h>
 
 #define GH_DEFAULT_ENDPOINT "https://api.github.com/graphql"
 #define GH_DEFAULT_USER_AGENT "github_mirror/0.1"
@@ -28,10 +27,6 @@ struct config {
 	/// The filepath to the git mirrors
 	/// Default: /srv/git
 	const char *git_base;
-	/// User to give ownership of the git mirrors
-	uid_t git_owner;
-	/// Group to give ownership of the git mirrors
-	gid_t git_group;
 };
 
 /**

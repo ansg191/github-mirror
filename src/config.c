@@ -7,7 +7,6 @@
 #include <ctype.h>
 #include <fcntl.h>
 #include <grp.h>
-#include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,11 +15,11 @@
 #include <unistd.h>
 
 const char *config_locations[] = {
-	"/etc/github_mirror/config.ini",
-	"/usr/local/etc/github_mirror/config.ini",
-	"/usr/local/github_mirror/config.ini",
-	"config.ini",
-	NULL,
+		"/etc/github_mirror/config.ini",
+		"/usr/local/etc/github_mirror/config.ini",
+		"/usr/local/github_mirror/config.ini",
+		"config.ini",
+		NULL,
 };
 
 enum config_section {
@@ -84,10 +83,6 @@ static char *trim(char *start, char *end)
 static int parse_line_inner(struct config *cfg, enum config_section section,
 			    char *key, char *value)
 {
-	char *endptr;
-	struct passwd *pw;
-	struct group *gr;
-
 	switch (section) {
 	case section_none:
 		fprintf(stderr,
@@ -113,39 +108,7 @@ static int parse_line_inner(struct config *cfg, enum config_section section,
 	case section_git:
 		if (!strcmp(key, "base"))
 			cfg->git_base = value;
-		else if (!strcmp(key, "owner")) {
-			// If the value is a number, set the owner to that
-			// number
-			cfg->git_owner = strtol(value, &endptr, 10);
-			if (*endptr == '\0')
-				return 0;
-
-			// Otherwise, convert the string into a uid
-			if (!((pw = getpwnam(value)))) {
-				fprintf(stderr,
-					"Error parsing config file: unknown "
-					"user: %s\n",
-					value);
-				return -1;
-			}
-			cfg->git_owner = pw->pw_uid;
-		} else if (!strcmp(key, "group")) {
-			// If the value is a number, set the group to that
-			// number
-			cfg->git_group = strtol(value, &endptr, 10);
-			if (*endptr == '\0')
-				return 0;
-
-			// Otherwise, convert the string into a gid
-			if (!((gr = getgrnam(value)))) {
-				fprintf(stderr,
-					"Error parsing config file: unknown "
-					"group: %s\n",
-					value);
-				return -1;
-			}
-			cfg->git_group = gr->gr_gid;
-		} else {
+		else {
 			fprintf(stderr,
 				"Error parsing config file: unknown key: %s\n",
 				key);
@@ -247,8 +210,6 @@ static void config_defaults(struct config *cfg)
 	cfg->endpoint = GH_DEFAULT_ENDPOINT;
 	cfg->user_agent = GH_DEFAULT_USER_AGENT;
 	cfg->git_base = "/srv/git";
-	cfg->git_owner = getuid();
-	cfg->git_group = getgid();
 }
 
 static int config_validate(const struct config *cfg)

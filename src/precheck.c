@@ -9,9 +9,6 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#ifdef __linux__
-#include <sys/capability.h>
-#endif
 
 /**
  * Check if git is installed and available in the PATH.
@@ -53,39 +50,6 @@ static int has_git(void)
 }
 
 /**
- * Check if we have CAP_CHOWN capability or if we are root.
- * @return 1 if we have chown capability, 0 if not.
- */
-static int has_chown(void)
-{
-#ifdef __linux__
-	cap_t caps = cap_get_proc();
-	if (caps == NULL) {
-		perror("cap_get_proc");
-		return 0;
-	}
-
-	cap_flag_value_t cap_value;
-	if (cap_get_flag(caps, CAP_CHOWN, CAP_EFFECTIVE, &cap_value) == -1) {
-		perror("cap_get_flag");
-		cap_free(caps);
-		return 0;
-	}
-	cap_free(caps);
-
-	if (cap_value == CAP_SET)
-		return 1; // We have CAP_CHOWN capability
-	fprintf(stderr, "Error: CAP_CHOWN capability is not set\n");
-	return 0; // We don't have CAP_CHOWN capability
-#else
-	if (geteuid() == 0)
-		return 1;
-	fprintf(stderr, "Error: not running as root\n");
-	return 0;
-#endif
-}
-
-/**
  * Check if the git base directory exists.
  * @param path Path to the directory to check
  * @return 1 if the directory exists, 0 if not.
@@ -103,8 +67,6 @@ static int git_base_exists(const char *path)
 int precheck_self(const struct config *cfg)
 {
 	if (!has_git())
-		return -1;
-	if (!has_chown())
 		return -1;
 	if (!git_base_exists(cfg->git_base))
 		return -1;
