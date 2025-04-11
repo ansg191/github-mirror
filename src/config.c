@@ -130,6 +130,16 @@ static int parse_token(char *value, struct config *cfg)
 	}
 	token[bytes_read] = '\0';
 
+	// Trim whitespace
+	char *tmp = strdup(trim(token, token + bytes_read));
+	free(token);
+	if (!tmp) {
+		perror("Error allocating token buffer");
+		close(fd);
+		return -1;
+	}
+	token = tmp;
+
 	cfg->token_owned = 1;
 	close(fd);
 
