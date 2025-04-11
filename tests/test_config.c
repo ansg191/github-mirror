@@ -26,7 +26,7 @@ static void config_read_normal(void **state)
 	struct config *cfg = config_read(path);
 	assert_non_null(cfg);
 	assert_string_equal(cfg->endpoint, "https://api.github.com/graphql");
-	assert_string_equal(cfg->token, "token");
+	assert_string_equal(cfg->token, "ghp_1234567890abcdef");
 	assert_string_equal(cfg->user_agent, "user-agent");
 	assert_string_equal(cfg->owner, "my-org");
 	assert_string_equal(cfg->git_base, "/srv/git");

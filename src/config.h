@@ -17,8 +17,11 @@ struct config {
 	char *contents;
 	size_t contents_len;
 
-	const char *endpoint;
 	const char *token;
+	/// Whether the token's memory is owned or borrowed from contents
+	int token_owned;
+
+	const char *endpoint;
 	const char *user_agent;
 
 	/// The owner of the repositories

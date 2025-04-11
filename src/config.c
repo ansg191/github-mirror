@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/errno.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -80,6 +81,70 @@ static char *trim(char *start, char *end)
 	return start;
 }
 
+/**
+ * Parse a token value from the config file.
+ * If the token is a file path, read the file and set the token to its contents.
+ * If not a file path, the raw token value is checked for validity.
+ * It then checks that the token starts with:
+ *	- "ghp_"
+ *	- "gho_"
+ *	- "ghu_"
+ *	- "ghs_"
+ *	- "ghf_"
+ * @param value token value
+ * @param cfg config struct
+ * @return 0 on success, -1 on error
+ */
+static int parse_token(char *value, struct config *cfg)
+{
+	char *token = value;
+
+	// Open the file to check if it is a file
+	const int fd = open(value, O_RDONLY);
+	if (fd == -1) {
+		if (errno != ENOENT) {
+			perror("Error opening token file");
+			return -1;
+		}
+		// Not a file, token check
+		cfg->token_owned = 0;
+		goto token_check;
+	}
+
+	// Read the file
+	token = malloc(64);
+	if (!token) {
+		perror("Error allocating token buffer");
+		close(fd);
+		return -1;
+	}
+
+	// Read the file contents
+	const ssize_t bytes_read = read(fd, token, 64);
+	if (bytes_read < 0) {
+		perror("Error reading token file");
+		free(token);
+		close(fd);
+		return -1;
+	}
+	token[bytes_read] = '\0';
+
+	cfg->token_owned = 1;
+	close(fd);
+
+token_check:
+	if (!strncmp(token, "ghp_", 4) || !strncmp(token, "gho_", 4) ||
+	    !strncmp(token, "ghu_", 4) || !strncmp(token, "ghs_", 4) ||
+	    !strncmp(token, "ghf_", 4)) {
+		cfg->token = token;
+	} else {
+		fprintf(stderr, "Error: invalid token format: %s\n", token);
+		free(token);
+		return -1;
+	}
+	return 0;
+}
+
 static int parse_line_inner(struct config *cfg, enum config_section section,
 			    char *key, char *value)
 {
@@ -92,9 +157,10 @@ static int parse_line_inner(struct config *cfg, enum config_section section,
 	case section_github:
 		if (!strcmp(key, "endpoint"))
 			cfg->endpoint = value;
-		else if (!strcmp(key, "token"))
-			cfg->token = value;
-		else if (!strcmp(key, "user_agent"))
+		else if (!strcmp(key, "token")) {
+			if (parse_token(value, cfg) < 0)
+				return -1;
+		} else if (!strcmp(key, "user_agent"))
 			cfg->user_agent = value;
 		else if (!strcmp(key, "owner"))
 			cfg->owner = value;
@@ -264,5 +330,7 @@ void config_free(struct config *config)
 	if (!config || !config->contents)
 		return;
 	munmap(config->contents, config->contents_len);
+	if (config->token_owned)
+		free((char *) config->token);
 	free(config);
 }
