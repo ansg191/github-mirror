@@ -91,6 +91,7 @@ static char *trim(char *start, char *end)
  *	- "ghu_"
  *	- "ghs_"
  *	- "ghf_"
+ *	- "github_pat_"
  * @param value token value
  * @param cfg config struct
  * @return 0 on success, -1 on error
@@ -112,7 +113,7 @@ static int parse_token(char *value, struct config *cfg)
 	}
 
 	// Read the file
-	token = malloc(64);
+	token = malloc(1024);
 	if (!token) {
 		perror("Error allocating token buffer");
 		close(fd);
@@ -120,7 +121,7 @@ static int parse_token(char *value, struct config *cfg)
 	}
 
 	// Read the file contents
-	const ssize_t bytes_read = read(fd, token, 64);
+	const ssize_t bytes_read = read(fd, token, 1024);
 	if (bytes_read < 0) {
 		perror("Error reading token file");
 		free(token);
@@ -135,7 +136,7 @@ static int parse_token(char *value, struct config *cfg)
 token_check:
 	if (!strncmp(token, "ghp_", 4) || !strncmp(token, "gho_", 4) ||
 	    !strncmp(token, "ghu_", 4) || !strncmp(token, "ghs_", 4) ||
-	    !strncmp(token, "ghf_", 4)) {
+	    !strncmp(token, "ghf_", 4) || !strncmp(token, "github_pat_", 11)) {
 		cfg->token = token;
 	} else {
 		fprintf(stderr, "Error: invalid token format: %s\n", token);
