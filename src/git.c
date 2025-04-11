@@ -207,8 +207,7 @@ static int create_mirror(const char *path, const struct repo_ctx *ctx)
 static int create_git_path(const struct repo_ctx *ctx)
 {
 	// Create owner directory if it doesn't exist
-	char *owner_path =
-			get_git_path(ctx->cfg->git_base, ctx->cfg->owner, NULL);
+	char *owner_path = get_git_path(ctx->git_base, ctx->cfg->owner, NULL);
 	if (!owner_path)
 		return -1;
 	if (mkdir(owner_path, 0755) == -1 && errno != EEXIST) {
@@ -219,8 +218,8 @@ static int create_git_path(const struct repo_ctx *ctx)
 	free(owner_path);
 
 	// Create repo directory if it doesn't exist
-	char *repo_path = get_git_path(ctx->cfg->git_base, ctx->cfg->owner,
-				       ctx->name);
+	char *repo_path =
+			get_git_path(ctx->git_base, ctx->cfg->owner, ctx->name);
 	if (!repo_path)
 		return -1;
 	if (mkdir(repo_path, 0755) == -1 && errno != EEXIST) {
@@ -275,8 +274,7 @@ static int update_mirror(const char *path)
 int git_mirror_repo(const struct repo_ctx *ctx)
 {
 	int ret = 0;
-	char *path = get_git_path(ctx->cfg->git_base, ctx->cfg->owner,
-				  ctx->name);
+	char *path = get_git_path(ctx->git_base, ctx->cfg->owner, ctx->name);
 	if (!path) {
 		perror("get_git_path");
 		return -1;

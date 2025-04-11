@@ -8,7 +8,8 @@
 #include "config.h"
 
 struct repo_ctx {
-	const struct config *cfg;
+	const char *git_base;
+	const struct github_cfg *cfg;
 
 	/// Name of the repo
 	const char *name;

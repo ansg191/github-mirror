@@ -25,11 +25,14 @@ static void config_read_normal(void **state)
 	const char *path = "../tests/fixtures/normal.ini";
 	struct config *cfg = config_read(path);
 	assert_non_null(cfg);
-	assert_string_equal(cfg->endpoint, "https://api.github.com/graphql");
-	assert_string_equal(cfg->token, "ghp_1234567890abcdef");
-	assert_string_equal(cfg->user_agent, "user-agent");
-	assert_string_equal(cfg->owner, "my-org");
 	assert_string_equal(cfg->git_base, "/srv/git");
+
+	assert_non_null(cfg->head);
+	assert_string_equal(cfg->head->endpoint, "https://api.github.com/graphql");
+	assert_string_equal(cfg->head->token, "ghp_1234567890abcdef");
+	assert_string_equal(cfg->head->user_agent, "user-agent");
+	assert_string_equal(cfg->head->owner, "my-org");
+	config_free(cfg);
 }
 
 int main(void)

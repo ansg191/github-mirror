@@ -12,20 +12,29 @@
 
 extern const char *config_locations[];
 
+struct github_cfg {
+	// Borrowed
+	/// Github graphql API endpoint
+	const char *endpoint;
+	/// Client user agent
+	const char *user_agent;
+	/// The owner of the repositories
+	const char *owner;
+
+	// Owned
+	/// Github auth token
+	const char *token;
+	/// Next owner in the list
+	struct github_cfg *next;
+};
+
 struct config {
 	/// The content of the config file
 	char *contents;
 	size_t contents_len;
 
-	const char *token;
-	/// Whether the token's memory is owned or borrowed from contents
-	int token_owned;
-
-	const char *endpoint;
-	const char *user_agent;
-
-	/// The owner of the repositories
-	const char *owner;
+	/// Repo owners to mirror
+	struct github_cfg *head;
 
 	/// The filepath to the git mirrors
 	/// Default: /srv/git

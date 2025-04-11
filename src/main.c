@@ -63,21 +63,8 @@ static int load_config(int argc, char **argv, struct config **cfg_out)
 	return 1;
 }
 
-int main(int argc, char **argv)
+static int mirror_owner(const char *git_base, const struct github_cfg *cfg)
 {
-	curl_global_init(CURL_GLOBAL_DEFAULT);
-
-	struct config *cfg = NULL;
-	const int ret = load_config(argc, argv, &cfg);
-	if (ret != 0 || !cfg)
-		return ret;
-
-	if (precheck_self(cfg)) {
-		fprintf(stderr, "Precheck failed\n");
-		config_free(cfg);
-		return 1;
-	}
-
 	const struct github_ctx ctx = {
 			.endpoint = cfg->endpoint,
 			.token = cfg->token,
@@ -98,13 +85,14 @@ int main(int argc, char **argv)
 	do {
 		if (github_client_list_user_repos(client, cfg->owner,
 						  end_cursor, &res))
-			return 1;
+			return -1;
 
 		for (size_t i = 0; i < res.repos_len; i++) {
 			printf("Repo: %s\t%s\n", res.repos[i].name,
 			       res.repos[i].url);
 
 			const struct repo_ctx repo = {
+					.git_base = git_base,
 					.cfg = cfg,
 					.name = res.repos[i].name,
 					.url = res.repos[i].url,
@@ -112,7 +100,7 @@ int main(int argc, char **argv)
 			};
 			if (git_mirror_repo(&repo) != 0) {
 				fprintf(stderr, "Failed to mirror repo\n");
-				status = 1;
+				status = -1;
 				break;
 			}
 		}
@@ -124,8 +112,38 @@ int main(int argc, char **argv)
 	} while (res.has_next_page);
 
 	free(end_cursor);
-	github_client_free(client);
 	free(login);
+	github_client_free(client);
+	return status;
+}
+
+int main(int argc, char **argv)
+{
+	curl_global_init(CURL_GLOBAL_DEFAULT);
+
+	struct config *cfg = NULL;
+	const int ret = load_config(argc, argv, &cfg);
+	if (ret != 0 || !cfg)
+		return ret;
+
+	if (precheck_self(cfg)) {
+		fprintf(stderr, "Precheck failed\n");
+		config_free(cfg);
+		return 1;
+	}
+
+	int status = 0;
+	struct github_cfg *owner = cfg->head;
+	while (owner) {
+		printf("Mirroring owner: %s\n", owner->owner);
+		if (mirror_owner(cfg->git_base, owner)) {
+			fprintf(stderr, "Failed to mirror owner: %s\n",
+				owner->owner);
+			status = 1;
+		}
+		owner = owner->next;
+	}
+
 	config_free(cfg);
 	curl_global_cleanup();
 	return status;

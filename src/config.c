@@ -93,22 +93,21 @@ static char *trim(char *start, char *end)
  *	- "ghf_"
  *	- "github_pat_"
  * @param value token value
- * @param cfg config struct
- * @return 0 on success, -1 on error
+ * @return Owned token value or NULL on error
  */
-static int parse_token(char *value, struct config *cfg)
+static char *parse_token(char *value)
 {
-	char *token = value;
+	char *token = NULL;
 
 	// Open the file to check if it is a file
 	const int fd = open(value, O_RDONLY);
 	if (fd == -1) {
 		if (errno != ENOENT) {
 			perror("Error opening token file");
-			return -1;
+			return NULL;
 		}
 		// Not a file, token check
-		cfg->token_owned = 0;
+		token = strdup(value);
 		goto token_check;
 	}
 
@@ -117,7 +116,7 @@ static int parse_token(char *value, struct config *cfg)
 	if (!token) {
 		perror("Error allocating token buffer");
 		close(fd);
-		return -1;
+		return NULL;
 	}
 
 	// Read the file contents
@@ -126,7 +125,7 @@ static int parse_token(char *value, struct config *cfg)
 		perror("Error reading token file");
 		free(token);
 		close(fd);
-		return -1;
+		return NULL;
 	}
 	token[bytes_read] = '\0';
 
@@ -136,24 +135,21 @@ static int parse_token(char *value, struct config *cfg)
 	if (!tmp) {
 		perror("Error allocating token buffer");
 		close(fd);
-		return -1;
+		return NULL;
 	}
 	token = tmp;
 
-	cfg->token_owned = 1;
 	close(fd);
 
 token_check:
 	if (!strncmp(token, "ghp_", 4) || !strncmp(token, "gho_", 4) ||
 	    !strncmp(token, "ghu_", 4) || !strncmp(token, "ghs_", 4) ||
 	    !strncmp(token, "ghf_", 4) || !strncmp(token, "github_pat_", 11)) {
-		cfg->token = token;
-	} else {
-		fprintf(stderr, "Error: invalid token format: %s\n", token);
-		free(token);
-		return -1;
+		return token;
 	}
-	return 0;
+	fprintf(stderr, "Error: invalid token format: %s\n", token);
+	free(token);
+	return NULL;
 }
 
 static int parse_line_inner(struct config *cfg, enum config_section section,
@@ -167,14 +163,13 @@ static int parse_line_inner(struct config *cfg, enum config_section section,
 		return -1;
 	case section_github:
 		if (!strcmp(key, "endpoint"))
-			cfg->endpoint = value;
+			cfg->head->endpoint = value;
 		else if (!strcmp(key, "token")) {
-			if (parse_token(value, cfg) < 0)
-				return -1;
+			cfg->head->token = parse_token(value);
 		} else if (!strcmp(key, "user_agent"))
-			cfg->user_agent = value;
+			cfg->head->user_agent = value;
 		else if (!strcmp(key, "owner"))
-			cfg->owner = value;
+			cfg->head->owner = value;
 		else {
 			fprintf(stderr,
 				"Error parsing config file: unknown key: %s\n",
@@ -217,9 +212,20 @@ static int parse_line(struct config *cfg, char *line,
 		}
 		*close = '\0';
 		char *section_name = trim(line + 1, close);
-		if (!strcmp(section_name, "github"))
+		if (!strcmp(section_name, "github")) {
 			*section = section_github;
-		else if (!strcmp(section_name, "git"))
+
+			// Add the new owner to the list
+			struct github_cfg *owner = calloc(1, sizeof(*owner));
+			if (!owner) {
+				perror("Error allocating owner");
+				return -1;
+			}
+			owner->endpoint = GH_DEFAULT_ENDPOINT;
+			owner->user_agent = GH_DEFAULT_USER_AGENT;
+			owner->next = cfg->head;
+			cfg->head = owner;
+		} else if (!strcmp(section_name, "git"))
 			*section = section_git;
 		else {
 			fprintf(stderr,
@@ -282,24 +288,23 @@ static int config_parse(struct config *cfg)
 	return 0;
 }
 
-static void config_defaults(struct config *cfg)
-{
-	cfg->endpoint = GH_DEFAULT_ENDPOINT;
-	cfg->user_agent = GH_DEFAULT_USER_AGENT;
-	cfg->git_base = "/srv/git";
-}
+static void config_defaults(struct config *cfg) { cfg->git_base = "/srv/git"; }
 
 static int config_validate(const struct config *cfg)
 {
-	if (!cfg->token) {
-		fprintf(stderr,
-			"Error: missing required field: github.token\n");
-		return -1;
-	}
-	if (!cfg->owner) {
-		fprintf(stderr,
-			"Error: missing required field: github.owner\n");
-		return -1;
+	const struct github_cfg *owner = cfg->head;
+	while (owner) {
+		if (!owner->token) {
+			fprintf(stderr, "Error: missing required field: "
+					"github.token\n");
+			return -1;
+		}
+		if (!owner->owner) {
+			fprintf(stderr, "Error: missing required field: "
+					"github.owner\n");
+			return -1;
+		}
+		owner = owner->next;
 	}
 	return 0;
 }
@@ -341,7 +346,15 @@ void config_free(struct config *config)
 	if (!config || !config->contents)
 		return;
 	munmap(config->contents, config->contents_len);
-	if (config->token_owned)
-		free((char *) config->token);
+
+	// Free the github_cfg list
+	struct github_cfg *owner = config->head;
+	while (owner) {
+		struct github_cfg *next = owner->next;
+		free((char *) owner->token);
+		free(owner);
+		owner = next;
+	}
+
 	free(config);
 }
