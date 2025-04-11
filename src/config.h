@@ -13,6 +13,9 @@
 extern const char *config_locations[];
 
 struct github_cfg {
+	/// Whether to skip mirroring fork repositories
+	int skip_forks;
+
 	// Borrowed
 	/// Github graphql API endpoint
 	const char *endpoint;

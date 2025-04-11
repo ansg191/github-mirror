@@ -170,7 +170,19 @@ static int parse_line_inner(struct config *cfg, enum config_section section,
 			cfg->head->user_agent = value;
 		else if (!strcmp(key, "owner"))
 			cfg->head->owner = value;
-		else {
+		else if (!strcmp(key, "skip-forks")) {
+			if (!strcmp(value, "true"))
+				cfg->head->skip_forks = 1;
+			else if (!strcmp(value, "false"))
+				cfg->head->skip_forks = 0;
+			else {
+				fprintf(stderr,
+					"Error parsing config file: "
+					"invalid value for skip-forks: %s\n",
+					value);
+				return -1;
+			}
+		} else {
 			fprintf(stderr,
 				"Error parsing config file: unknown key: %s\n",
 				key);

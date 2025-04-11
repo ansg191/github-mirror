@@ -88,6 +88,12 @@ static int mirror_owner(const char *git_base, const struct github_cfg *cfg)
 			return -1;
 
 		for (size_t i = 0; i < res.repos_len; i++) {
+			if (cfg->skip_forks && res.repos[i].is_fork) {
+				fprintf(stderr, "Skipping forked repo: %s\n",
+					res.repos[i].name);
+				continue;
+			}
+
 			printf("Repo: %s\t%s\n", res.repos[i].name,
 			       res.repos[i].url);
 
