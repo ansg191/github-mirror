@@ -3,6 +3,24 @@ project(github_mirror C)
 
 set(CMAKE_C_STANDARD 17)
 include(FetchContent)
+include(CheckCCompilerFlag)
+
+# Custom compiler flags
+set(custom_compiler_flags)
+set(SANITIZERS "address,undefined")
+list(APPEND custom_compiler_flags
+        -Wall
+        -Wextra
+        -Wpedantic
+        -Werror
+)
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    list(APPEND custom_compiler_flags
+            -fno-omit-frame-pointer
+            -fstack-protector-strong
+            -fsanitize=${SANITIZERS}
+    )
+endif ()
 
 # CURL
 find_package(CURL REQUIRED)
@@ -73,24 +91,18 @@ add_dependencies(github_mirror generate_graphql_headers)
 install(TARGETS github_mirror DESTINATION bin)
 
 # Compile Options
-target_compile_options(github_mirror PRIVATE
-        -Wall
-        -Wextra
-        -Wpedantic
-        -Werror
-)
+foreach (compiler_flag ${custom_compiler_flags})
+    CHECK_C_COMPILER_FLAG(${compiler_flag} "FLAG_SUPPORTED_${current_variable}")
+    if (FLAG_SUPPORTED_${current_variable})
+        message(STATUS "Compiler flag ${compiler_flag} is supported")
+        target_compile_options(github_mirror PRIVATE ${compiler_flag})
+    else ()
+        message(WARNING "Compiler flag ${compiler_flag} is not supported")
+    endif ()
+endforeach ()
 
-# Debug Compile Flags
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    message(STATUS "Enabling flags for Debug build")
-    set(SANITIZERS "address,undefined")
-#    set(SANITIZERS "")
-
-    target_compile_options(github_mirror PRIVATE
-            -fno-omit-frame-pointer
-            -fstack-protector-strong
-            -fsanitize=${SANITIZERS}
-    )
+# Debug and Sanitizers is not empty
+if (CMAKE_BUILD_TYPE STREQUAL "Debug" AND SANITIZERS)
     target_link_options(github_mirror PRIVATE "-fsanitize=${SANITIZERS}")
 endif ()
 
