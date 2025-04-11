@@ -125,6 +125,7 @@ static int mirror_owner(const char *git_base, const struct github_cfg *cfg)
 
 int main(int argc, char **argv)
 {
+	setbuf(stdout, NULL);
 	curl_global_init(CURL_GLOBAL_DEFAULT);
 
 	struct config *cfg = NULL;
