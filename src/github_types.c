@@ -126,10 +126,18 @@ int list_repos_from_json(cJSON *root, struct list_repos_res *res)
 			status = -1;
 			goto end;
 		}
+		cJSON *is_private = cJSON_GetObjectItemCaseSensitive(
+				repo, "isPrivate");
+		if (!is_private || !cJSON_IsBool(is_private)) {
+			fprintf(stderr, "Error: isPrivate not found\n");
+			status = -1;
+			goto end;
+		}
 
 		res->repos[res->repos_len].name = strdup(name->valuestring);
 		res->repos[res->repos_len].url = strdup(url->valuestring);
 		res->repos[res->repos_len].is_fork = cJSON_IsTrue(is_fork);
+		res->repos[res->repos_len].is_private = cJSON_IsTrue(is_private);
 		res->repos_len++;
 	}
 

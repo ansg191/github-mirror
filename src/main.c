@@ -108,6 +108,12 @@ static int mirror_owner(const char *git_base, const struct github_cfg *cfg,
 					       res.repos[i].name);
 				continue;
 			}
+			if (cfg->skip_private && res.repos[i].is_private) {
+				if (!quiet)
+					printf("Skipping private repo: %s\n",
+					       res.repos[i].name);
+				continue;
+			}
 
 			if (!quiet)
 				printf("Repo: %s\t%s\n", res.repos[i].name,

@@ -17,6 +17,7 @@ struct list_repos_res {
 		char *name;
 		char *url;
 		int is_fork;
+		int is_private;
 	} *repos;
 
 	size_t repos_len;
