@@ -152,6 +152,21 @@ token_check:
 	return NULL;
 }
 
+static int parse_bool(const char *value, int *out)
+{
+	if (!strcmp(value, "true") || !strcmp(value, "1") ||
+	    !strcmp(value, "yes") || !strcmp(value, "on")) {
+		*out = 1;
+		return 0;
+	}
+	if (!strcmp(value, "false") || !strcmp(value, "0") ||
+	    !strcmp(value, "no") || !strcmp(value, "off")) {
+		*out = 0;
+		return 0;
+	}
+	return -1;
+}
+
 static int parse_line_inner(struct config *cfg, enum config_section section,
 			    char *key, char *value)
 {
@@ -171,14 +186,18 @@ static int parse_line_inner(struct config *cfg, enum config_section section,
 		else if (!strcmp(key, "owner"))
 			cfg->head->owner = value;
 		else if (!strcmp(key, "skip-forks")) {
-			if (!strcmp(value, "true"))
-				cfg->head->skip_forks = 1;
-			else if (!strcmp(value, "false"))
-				cfg->head->skip_forks = 0;
-			else {
+			if (parse_bool(value, &cfg->head->skip_forks) < 0) {
 				fprintf(stderr,
 					"Error parsing config file: "
 					"invalid value for skip-forks: %s\n",
+					value);
+				return -1;
+			}
+		} else if (!strcmp(key, "skip-private")) {
+			if (parse_bool(value, &cfg->head->skip_private) < 0) {
+				fprintf(stderr,
+					"Error parsing config file: "
+					"invalid value for skip-private: %s\n",
 					value);
 				return -1;
 			}
