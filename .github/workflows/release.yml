@@ -32,6 +32,9 @@ jobs:
             -S ${{ github.workspace }}
           cmake --build ${{ steps.strings.outputs.build-output-dir }} --config Release
           cpack -G DEB --config ${{ steps.strings.outputs.build-output-dir }}/CPackConfig.cmake
+          for file in *.deb; do
+            mv "$file" "${file%.deb}-x86_64.deb"
+          done
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -96,6 +99,9 @@ jobs:
               -S ${{ github.workspace }}
           cmake --build ${{ steps.strings.outputs.build-output-dir }} --config Release
           cpack -G DEB --config ${{ steps.strings.outputs.build-output-dir }}/CPackConfig.cmake
+          for file in *.deb; do
+            mv "$file" "${file%.deb}-aarch64.deb"
+          done
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
