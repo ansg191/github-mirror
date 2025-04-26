@@ -124,7 +124,7 @@ add_test(NAME test_config COMMAND test_config)
 include(InstallRequiredSystemLibraries)
 
 set(CPACK_PACKAGE_NAME "github_mirror")
-set(CPACK_PACKAGE_VERSION "0.1.0")
+set(CPACK_PACKAGE_VERSION "0.1.1")
 set(CPACK_PACKAGE_CONTACT "ansg191@anshulg.com")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Anshul Gupta")
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.28), libcurl4 (>= 7.64)")
