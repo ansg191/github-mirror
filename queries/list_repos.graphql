@@ -5,6 +5,7 @@ query GetUserRepos($username: String!, $after: String) {
                 name
                 url
                 isFork
+                isPrivate
             }
             pageInfo {
                 hasNextPage
