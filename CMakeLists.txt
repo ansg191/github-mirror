@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.30)
-project(github_mirror C)
+project(github_mirror VERSION 0.1.2 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 17)
 include(FetchContent)
@@ -87,6 +87,9 @@ add_executable(github_mirror
 )
 target_link_libraries(github_mirror PRIVATE cjson CURL::libcurl)
 target_include_directories(github_mirror PRIVATE ${cjson_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_compile_definitions(github_mirror PRIVATE
+        GITHUB_MIRROR_VERSION="${PROJECT_VERSION}"
+)
 add_dependencies(github_mirror generate_graphql_headers)
 install(TARGETS github_mirror DESTINATION bin)
 
@@ -124,7 +127,7 @@ add_test(NAME test_config COMMAND test_config)
 include(InstallRequiredSystemLibraries)
 
 set(CPACK_PACKAGE_NAME "github_mirror")
-set(CPACK_PACKAGE_VERSION "0.1.2")
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
 set(CPACK_PACKAGE_CONTACT "ansg191@anshulg.com")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Anshul Gupta")
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.28), libcurl4 (>= 7.64)")

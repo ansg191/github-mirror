@@ -18,12 +18,13 @@ static int load_config(int argc, char **argv, struct config **cfg_out)
 	char *cfg_path = NULL;
 
 	static struct option long_options[] = {
+			{"version", no_argument, 0, 'v'},
 			{"config", required_argument, 0, 'c'},
 			{"help", no_argument, 0, 'h'},
 			{"quiet", no_argument, 0, 'q'},
 			{0, 0, 0, 0}};
 
-	while ((opt = getopt_long(argc, argv, "C:c:h:q", long_options,
+	while ((opt = getopt_long(argc, argv, "C:c:h:q:v", long_options,
 				  &opt_idx)) != -1) {
 		switch (opt) {
 		case 'C':
@@ -38,6 +39,10 @@ static int load_config(int argc, char **argv, struct config **cfg_out)
 		case 'q':
 			quiet = 1;
 			break;
+		case 'v':
+			fprintf(stderr, "github_mirror v%s\n",
+				GITHUB_MIRROR_VERSION);
+			return 0;
 		default:
 			fprintf(stderr, "Unknown option: %c\n", opt);
 			fprintf(stderr,
