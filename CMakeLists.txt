@@ -109,6 +109,10 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug" AND SANITIZERS)
     target_link_options(github_mirror PRIVATE "-fsanitize=${SANITIZERS}")
 endif ()
 
+# Manpages
+file(GLOB MANPAGES "${CMAKE_CURRENT_SOURCE_DIR}/man/*")
+install(FILES ${MANPAGES} DESTINATION share/man/man1)
+
 # Testing
 enable_testing()
 

@@ -1,0 +1,67 @@
+.Dd 4/28/2025
+.Dt GITHUB_MIRROR 1
+.Os Darwin
+
+.Sh NAME
+.Nm github_mirror
+.Nm github-mirror
+.Nd Mirror GitHub repositories to a local directory
+
+.Sh SYNOPSIS
+.Nm
+.Op Fl C | Fl -config Ar file
+.Op Fl h | -help
+.Op Fl q | -quiet
+.Op Fl v | -version
+
+.Sh DESCRIPTION
+
+The
+.Nm
+utility is a tool for mirroring GitHub repositories to a local directory.
+It can be used to create a local copy of a GitHub repository, which can be useful for backup purposes or for working
+offline.
+
+The following options are available:
+.Bl -tag -width Ds
+
+.It Fl C Ar file , Fl -config Ar file
+Load configuration from the specified file.
+By default it will search in the following locations:
+.Bl -tag -width Ds
+.It Pa /etc/github_mirror/config.ini
+.It Pa /usr/local/etc/github_mirror/config.ini
+.It Pa /usr/local/github_mirror/config.ini
+.It Pa config.ini
+.El
+
+.It Fl h , Fl -help
+Print help message and exit.
+
+.It Fl q , Fl -quiet
+Suppress all output except for errors.
+
+This option is useful for running the program in the background or as a cron job.
+It will not suppress error messages.
+
+.It Fl v , Fl -version
+Print version information and exit.
+
+.El
+
+.Sh EXIT STATUS
+The
+.Nm
+utility exits with one of the following values:
+.Bl -tag -width Ds
+.It 0
+Success.
+.It 1
+An error occurred.
+.El
+
+.Sh SEE ALSO
+.Xr git 1
+
+.Sh AUTHORS
+.An Anshul Gupta Aq Mt ansg191@anshulg.com
