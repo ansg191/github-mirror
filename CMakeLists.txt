@@ -118,11 +118,17 @@ enable_testing()
 
 add_executable(test_buffer tests/test_buffer.c src/buffer.c)
 target_link_libraries(test_buffer PRIVATE cmocka::cmocka)
-target_compile_definitions(test_buffer PRIVATE TEST_ALLOC)
+target_compile_definitions(test_buffer PRIVATE
+        TEST_ALLOC
+        GITHUB_MIRROR_VERSION="${PROJECT_VERSION}"
+)
 
 add_executable(test_config tests/test_config.c src/config.c)
 target_link_libraries(test_config PRIVATE cmocka::cmocka)
-target_compile_definitions(test_config PRIVATE TEST_ALLOC)
+target_compile_definitions(test_config PRIVATE
+        TEST_ALLOC
+        GITHUB_MIRROR_VERSION="${PROJECT_VERSION}"
+)
 
 add_test(NAME test_buffer COMMAND test_buffer)
 add_test(NAME test_config COMMAND test_config)
