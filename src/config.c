@@ -16,10 +16,14 @@
 #include <unistd.h>
 
 const char *config_locations[] = {
-		"/etc/github_mirror/config.ini",
-		"/usr/local/etc/github_mirror/config.ini",
-		"/usr/local/github_mirror/config.ini",
 		"config.ini",
+		"github_mirror.conf",
+		"/usr/local/github_mirror/config.ini",
+		"/usr/local/github_mirror.conf",
+		"/usr/local/etc/github_mirror/config.ini",
+		"/usr/local/etc/github_mirror.conf",
+		"/etc/github_mirror/config.ini",
+		"/etc/github_mirror.conf",
 		NULL,
 };
 
