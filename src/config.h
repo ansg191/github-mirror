@@ -8,7 +8,7 @@
 #include <stdlib.h>
 
 #define GH_DEFAULT_ENDPOINT "https://api.github.com/graphql"
-#define GH_DEFAULT_USER_AGENT "github_mirror/0.1"
+#define GH_DEFAULT_USER_AGENT ("github_mirror/" GITHUB_MIRROR_VERSION)
 
 extern const char *config_locations[];
 
