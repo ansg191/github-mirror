@@ -110,8 +110,10 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug" AND SANITIZERS)
 endif ()
 
 # Manpages
-file(GLOB MANPAGES "${CMAKE_CURRENT_SOURCE_DIR}/man/*")
+file(GLOB MANPAGES "${CMAKE_CURRENT_SOURCE_DIR}/man/*.1")
 install(FILES ${MANPAGES} DESTINATION share/man/man1)
+file(GLOB MANPAGES "${CMAKE_CURRENT_SOURCE_DIR}/man/*.5")
+install(FILES ${MANPAGES} DESTINATION share/man/man5)
 
 # Testing
 enable_testing()

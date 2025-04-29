@@ -1,0 +1,87 @@
+.Dd 4/28/2025
+.Dt GITHUB_MIRROR.CONF 5
+.Os Darwin
+
+.Sh NAME
+.Nm github_mirror.conf
+.Nd Configuration file for github_mirror
+
+.Sh SYNOPSIS
+.Nm
+
+.Sh DESCRIPTION
+The
+.Nm
+file contains options used to specify github_mirror configuration.
+
+.Pp
+The file is in a INI format, where each line contains an option field and a
+value field, separated by an equals character '='.  For example:
+.Bd -literal -offset indent
+option = value
+.Ed
+
+There are also section headers, which are enclosed in square brackets.
+For example:
+.Bd -literal -offset indent
+[section]
+option = value
+.Ed
+Some sections can be repeated (ex. [github]), while others are not (ex. [git]).
+
+Each line specifies a single option/value pair.
+Whitespace can be used freely before and after fields.
+A hash character '#' begins a comment that extends to the end of the line.
+
+.Pp
+The options in the github section (repeatable) are:
+.Bl -tag -width -indent
+
+.It Cm endpoint
+The GitHub GraphQL API endpoint to use.  The default is
+.Lk https://api.github.com/graphql
+
+.It Cm token
+The GitHub API token to use.  Required.
+
+This can either be a literal token or a path to a file containing the token.
+
+.It Cm user_agent
+The User-Agent string to use.  The default is
+.Dq Cm github_mirror/VERSION
+where VERSION is the version of the program.
+
+.It Cm owner
+The owner of the repository to mirror.  Required.
+
+.It Cm skip-forks
+If set to true, skip mirroring fork repositories owned by the user.
+The default is false.
+
+.It Cm skip-private
+If set to true, skip mirroring private repositories owned by the user.
+The default is false.
+
+.El
+
+.Pp
+The options in the git section (not repeatable) are:
+.Bl -tag -width -indent
+
+.It Cm base
+The base directory to mirror repositories into. The default is
+.Pa /srv/git .
+
+.El
+
+.Sh FILES
+.Bl -tag -width "/etc/github_mirror.conf" -compact
+.It Pa /etc/github_mirror.conf
+The
+.Nm
+configuration file.
+.El
+
+.Sh SEE ALSO
+.Xr github_mirror 1 ,
+.Xr git 1
