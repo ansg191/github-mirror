@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.30)
-project(github_mirror VERSION 0.1.3 LANGUAGES C)
+project(github_mirror VERSION 0.1.4 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 17)
 include(FetchContent)
