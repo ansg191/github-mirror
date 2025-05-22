@@ -40,7 +40,7 @@ static int load_config(int argc, char **argv, struct config **cfg_out)
 			quiet = 1;
 			break;
 		case 'v':
-			fprintf(stderr, "github_mirror v%s\n",
+			fprintf(stderr, "github-mirror v%s\n",
 				GITHUB_MIRROR_VERSION);
 			return 0;
 		default:

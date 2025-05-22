@@ -1,9 +1,9 @@
 .Dd 4/28/2025
-.Dt GITHUB_MIRROR 1
+.Dt GITHUB-MIRROR 1
 .Os Darwin
 
 .Sh NAME
-.Nm github_mirror
+.Nm github-mirror
 .Nm github-mirror
 .Nd Mirror GitHub repositories to a local directory
 
@@ -30,17 +30,17 @@ Load configuration from the specified file.
 By default it will search in the following locations:
 .Bl -tag -width Ds
 .It Pa config.ini
-.It Pa github_mirror.conf
-.It Pa /usr/local/github_mirror/config.ini
-.It Pa /usr/local/github_mirror.conf
-.It Pa /usr/local/etc/github_mirror/config.ini
-.It Pa /usr/local/etc/github_mirror.conf
-.It Pa /etc/github_mirror/config.ini
-.It Pa /etc/github_mirror.conf
+.It Pa github-mirror.conf
+.It Pa /usr/local/github-mirror/config.ini
+.It Pa /usr/local/github-mirror.conf
+.It Pa /usr/local/etc/github-mirror/config.ini
+.It Pa /usr/local/etc/github-mirror.conf
+.It Pa /etc/github-mirror/config.ini
+.It Pa /etc/github-mirror.conf
 .El
 
 See
-.Xr github_mirror.conf 5
+.Xr github-mirror.conf 5
 for more details on the configuration file format.
 
 .It Fl h , Fl -help
@@ -69,7 +69,7 @@ An error occurred.
 .El
 
 .Sh SEE ALSO
-.Xr github_mirror.conf 5 ,
+.Xr github-mirror.conf 5 ,
 .Xr git 1
 
 .Sh AUTHORS

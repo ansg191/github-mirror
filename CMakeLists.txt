@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.30)
-project(github_mirror VERSION 0.1.4 LANGUAGES C)
+project(github-mirror VERSION 0.1.4 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 17)
 include(CheckCCompilerFlag)
@@ -61,7 +61,7 @@ endforeach ()
 add_custom_target(generate_graphql_headers ALL DEPENDS ${GENERATED_HEADERS})
 
 # Executable
-add_executable(github_mirror
+add_executable(github-mirror
         src/main.c
         src/github.c
         src/github.h
@@ -77,20 +77,20 @@ add_executable(github_mirror
         src/precheck.c
         src/precheck.h
 )
-target_link_libraries(github_mirror PRIVATE cjson CURL::libcurl)
-target_include_directories(github_mirror PRIVATE ${CJSON_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_compile_definitions(github_mirror PRIVATE
+target_link_libraries(github-mirror PRIVATE cjson CURL::libcurl)
+target_include_directories(github-mirror PRIVATE ${CJSON_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_compile_definitions(github-mirror PRIVATE
         GITHUB_MIRROR_VERSION="${PROJECT_VERSION}"
 )
-add_dependencies(github_mirror generate_graphql_headers)
-install(TARGETS github_mirror DESTINATION bin)
+add_dependencies(github-mirror generate_graphql_headers)
+install(TARGETS github-mirror DESTINATION bin)
 
 # Compile Options
 foreach (compiler_flag ${custom_compiler_flags})
     CHECK_C_COMPILER_FLAG(${compiler_flag} "FLAG_SUPPORTED_${current_variable}")
     if (FLAG_SUPPORTED_${current_variable})
         message(STATUS "Compiler flag ${compiler_flag} is supported")
-        target_compile_options(github_mirror PRIVATE ${compiler_flag})
+        target_compile_options(github-mirror PRIVATE ${compiler_flag})
     else ()
         message(WARNING "Compiler flag ${compiler_flag} is not supported")
     endif ()
@@ -98,7 +98,7 @@ endforeach ()
 
 # Debug and Sanitizers is not empty
 if (CMAKE_BUILD_TYPE STREQUAL "Debug" AND SANITIZERS)
-    target_link_options(github_mirror PRIVATE "-fsanitize=${SANITIZERS}")
+    target_link_options(github-mirror PRIVATE "-fsanitize=${SANITIZERS}")
 endif ()
 
 # Manpages
@@ -130,7 +130,7 @@ add_test(NAME test_config COMMAND test_config)
 # Packaging
 include(InstallRequiredSystemLibraries)
 
-set(CPACK_PACKAGE_NAME "github_mirror")
+set(CPACK_PACKAGE_NAME "github-mirror")
 set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
 set(CPACK_PACKAGE_CONTACT "ansg191@anshulg.com")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Anshul Gupta")

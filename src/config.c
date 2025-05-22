@@ -17,13 +17,13 @@
 
 const char *config_locations[] = {
 		"config.ini",
-		"github_mirror.conf",
-		"/usr/local/github_mirror/config.ini",
-		"/usr/local/github_mirror.conf",
-		"/usr/local/etc/github_mirror/config.ini",
-		"/usr/local/etc/github_mirror.conf",
-		"/etc/github_mirror/config.ini",
-		"/etc/github_mirror.conf",
+		"github-mirror.conf",
+		"/usr/local/github-mirror/config.ini",
+		"/usr/local/github-mirror.conf",
+		"/usr/local/etc/github-mirror/config.ini",
+		"/usr/local/etc/github-mirror.conf",
+		"/etc/github-mirror/config.ini",
+		"/etc/github-mirror.conf",
 		NULL,
 };
 

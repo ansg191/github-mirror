@@ -1,10 +1,10 @@
 .Dd 4/28/2025
-.Dt GITHUB_MIRROR.CONF 5
+.Dt GITHUB-MIRROR.CONF 5
 .Os Darwin
 
 .Sh NAME
-.Nm github_mirror.conf
-.Nd Configuration file for github_mirror
+.Nm github-mirror.conf
+.Nd Configuration file for github-mirror
 
 .Sh SYNOPSIS
 .Nm
@@ -12,7 +12,7 @@
 .Sh DESCRIPTION
 The
 .Nm
-file contains options used to specify github_mirror configuration.
+file contains options used to specify github-mirror configuration.
 
 .Pp
 The file is in a INI format, where each line contains an option field and a
@@ -48,7 +48,7 @@ This can either be a literal token or a path to a file containing the token.
 
 .It Cm user_agent
 The User-Agent string to use.  The default is
-.Dq Cm github_mirror/VERSION
+.Dq Cm github-mirror/VERSION
 where VERSION is the version of the program.
 
 .It Cm owner
@@ -75,13 +75,13 @@ The base directory to mirror repositories into. The default is
 .El
 
 .Sh FILES
-.Bl -tag -width "/etc/github_mirror.conf" -compact
-.It Pa /etc/github_mirror.conf
+.Bl -tag -width "/etc/github-mirror.conf" -compact
+.It Pa /etc/github-mirror.conf
 The
 .Nm
 configuration file.
 .El
 
 .Sh SEE ALSO
-.Xr github_mirror 1 ,
+.Xr github-mirror 1 ,
 .Xr git 1
