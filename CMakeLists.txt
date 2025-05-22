@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.30)
 project(github_mirror VERSION 0.1.4 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 17)
-include(FetchContent)
 include(CheckCCompilerFlag)
 
 # Custom compiler flags
@@ -26,15 +25,8 @@ endif ()
 find_package(CURL REQUIRED)
 
 # CJSON
-FetchContent_Declare(
-        cjson
-        GIT_REPOSITORY https://github.com/DaveGamble/cJSON
-        GIT_TAG v1.7.18
-        EXCLUDE_FROM_ALL
-)
+find_package(cJSON REQUIRED)
 set(ENABLE_CJSON_TEST OFF CACHE BOOL "Enable cJSON tests" FORCE)
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries" FORCE)
-FetchContent_MakeAvailable(cjson)
 
 # CMocka
 find_package(cmocka REQUIRED)
@@ -86,7 +78,7 @@ add_executable(github_mirror
         src/precheck.h
 )
 target_link_libraries(github_mirror PRIVATE cjson CURL::libcurl)
-target_include_directories(github_mirror PRIVATE ${cjson_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(github_mirror PRIVATE ${CJSON_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_compile_definitions(github_mirror PRIVATE
         GITHUB_MIRROR_VERSION="${PROJECT_VERSION}"
 )
@@ -142,7 +134,7 @@ set(CPACK_PACKAGE_NAME "github_mirror")
 set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
 set(CPACK_PACKAGE_CONTACT "ansg191@anshulg.com")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Anshul Gupta")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.28), libcurl4 (>= 7.64)")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.28), libcurl4 (>= 7.64), libcjson1 (>= 1.7.18)")
 
 set(CPACK_GENERATOR "DEB")
 include(CPack)

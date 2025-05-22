@@ -23,7 +23,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             libcurl4-openssl-dev \
-            libcmocka-dev
+            libcmocka-dev \
+            libcjson-dev
 
       - name: Build and Package
         run: |
@@ -87,7 +88,8 @@ jobs:
           sudo apt-get install -y \
             gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
             libcurl4-openssl-dev:arm64 \
-            libcmocka-dev:arm64
+            libcmocka-dev:arm64 \
+            libcjson-dev:arm64
 
       - name: Build and Package
         run: |

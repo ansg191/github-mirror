@@ -5,7 +5,7 @@
 #ifndef GITHUB_TYPES_H
 #define GITHUB_TYPES_H
 
-#include <cJSON.h>
+#include <cjson/cJSON.h>
 
 char *identity_from_json(const cJSON *root);
 
