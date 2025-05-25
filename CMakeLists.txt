@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.30)
+cmake_minimum_required(VERSION 3.25)
 project(github-mirror VERSION 0.1.4 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 17)
@@ -111,14 +111,14 @@ install(FILES ${MANPAGES} DESTINATION share/man/man5)
 enable_testing()
 
 add_executable(test_buffer tests/test_buffer.c src/buffer.c)
-target_link_libraries(test_buffer PRIVATE cmocka::cmocka)
+target_link_libraries(test_buffer PRIVATE ${CMOCKA_LIBRARIES})
 target_compile_definitions(test_buffer PRIVATE
         TEST_ALLOC
         GITHUB_MIRROR_VERSION="${PROJECT_VERSION}"
 )
 
 add_executable(test_config tests/test_config.c src/config.c)
-target_link_libraries(test_config PRIVATE cmocka::cmocka)
+target_link_libraries(test_config PRIVATE ${CMOCKA_LIBRARIES})
 target_compile_definitions(test_config PRIVATE
         TEST_ALLOC
         GITHUB_MIRROR_VERSION="${PROJECT_VERSION}"
