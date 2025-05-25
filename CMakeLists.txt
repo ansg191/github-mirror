@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(github-mirror VERSION 0.1.4 LANGUAGES C)
+project(github-mirror VERSION 0.2.2 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 17)
 include(CheckCCompilerFlag)
