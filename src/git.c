@@ -53,25 +53,36 @@ static char *get_git_path(const char *base, const char *owner, const char *name)
 }
 
 /**
+ * Prepares a repository URL for use with git.
  * Adds authentication information to the HTTPS URL for git.
+ * Does nothing for ssh URLs.
  * @param url The HTTPS URL to modify
  * @param user The username for authentication
  * @param token The token for authentication
  * @return A new string containing the modified URL with authentication
  * information
  */
-static char *add_url_auth(const char *url, const char *user, const char *token)
+static char *prepare_git_url(const char *url, const char *user,
+			     const char *token)
 {
 	const char *https_prefix = "https://";
-	const size_t prefix_len = strlen(https_prefix);
+	const char *ssh_prefix = "ssh://";
+	const size_t http_prefix_len = strlen(https_prefix);
+	const size_t ssh_prefix_len = strlen(ssh_prefix);
 	size_t new_len;
 	char *new_url;
 
 	if (!url || !user || !token)
 		return NULL;
 
+	// Check if the URL starts with "ssh://"
+	if (strncmp(url, ssh_prefix, ssh_prefix_len) == 0) {
+		// If it's an SSH URL, return it unchanged
+		return strdup(url);
+	}
+
 	// Find the position of "https://"
-	if (strncmp(url, https_prefix, prefix_len) != 0) {
+	if (strncmp(url, https_prefix, http_prefix_len) != 0) {
 		fprintf(stderr, "Error: URL does not start with https://\n");
 		return NULL;
 	}
@@ -88,7 +99,7 @@ static char *add_url_auth(const char *url, const char *user, const char *token)
 
 	// Construct the new URL
 	snprintf(new_url, new_len + 1, "https://%s:%s@%s", user, token,
-		 url + prefix_len);
+		 url + http_prefix_len);
 
 	return new_url;
 }
@@ -172,8 +183,8 @@ static int create_mirror(const char *path, const struct repo_ctx *ctx,
 	if (pid == 0) {
 		// Child process
 		// Convert the URL to a format that git can use
-		char *url = add_url_auth(ctx->url, ctx->username,
-					 ctx->cfg->token);
+		char *url = prepare_git_url(ctx->url, ctx->username,
+					    ctx->token);
 
 		// Run git
 		char *args[7];
@@ -216,7 +227,7 @@ static int create_mirror(const char *path, const struct repo_ctx *ctx,
 static int create_git_path(const struct repo_ctx *ctx)
 {
 	// Create owner directory if it doesn't exist
-	char *owner_path = get_git_path(ctx->git_base, ctx->cfg->owner, NULL);
+	char *owner_path = get_git_path(ctx->git_base, ctx->owner, NULL);
 	if (!owner_path)
 		return -1;
 	if (mkdir(owner_path, 0755) == -1 && errno != EEXIST) {
@@ -227,8 +238,7 @@ static int create_git_path(const struct repo_ctx *ctx)
 	free(owner_path);
 
 	// Create repo directory if it doesn't exist
-	char *repo_path =
-			get_git_path(ctx->git_base, ctx->cfg->owner, ctx->name);
+	char *repo_path = get_git_path(ctx->git_base, ctx->owner, ctx->name);
 	if (!repo_path)
 		return -1;
 	if (mkdir(repo_path, 0755) == -1 && errno != EEXIST) {
@@ -293,7 +303,7 @@ static int update_mirror(const char *path, int quiet)
 int git_mirror_repo(const struct repo_ctx *ctx, int quiet)
 {
 	int ret = 0;
-	char *path = get_git_path(ctx->git_base, ctx->cfg->owner, ctx->name);
+	char *path = get_git_path(ctx->git_base, ctx->owner, ctx->name);
 	if (!path) {
 		perror("get_git_path");
 		return -1;

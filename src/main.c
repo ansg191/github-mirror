@@ -4,11 +4,14 @@
 
 #include <curl/curl.h>
 
+#include "client.h"
 #include "config.h"
 #include "git.h"
-#include "github.h"
-#include "github_types.h"
+#include "github/client.h"
+#include "github/types.h"
 #include "precheck.h"
+#include "srht/client.h"
+#include "srht/types.h"
 
 static int load_config(int argc, char **argv, struct config **cfg_out)
 {
@@ -81,29 +84,32 @@ static int load_config(int argc, char **argv, struct config **cfg_out)
 	return 1;
 }
 
-static int mirror_owner(const char *git_base, const struct github_cfg *cfg,
-			int quiet)
+static int mirror_github(const char *git_base, const struct github_cfg *cfg,
+			 int quiet)
 {
-	const struct github_ctx ctx = {
+	if (!quiet)
+		printf("Mirroring Github owner: %s\n", cfg->owner);
+
+	const struct gql_ctx ctx = {
 			.endpoint = cfg->endpoint,
 			.token = cfg->token,
 			.user_agent = cfg->user_agent,
 	};
-	github_client *client = github_client_new(ctx);
+	gql_client *client = gql_client_new(ctx);
 	if (!client) {
 		fprintf(stderr, "Failed to create GitHub client\n");
 		return 1;
 	}
 
 	// Get identity
-	char *login = github_client_identity(client);
+	char *login = github_identity(client);
 
-	struct list_repos_res res;
+	struct gh_list_repos_res res;
 	char *end_cursor = NULL;
 	int status = 0;
 	do {
-		if (github_client_list_user_repos(client, cfg->owner,
-						  end_cursor, &res))
+		if (github_list_user_repos(client, cfg->owner, end_cursor,
+					   &res))
 			return -1;
 
 		for (size_t i = 0; i < res.repos_len; i++) {
@@ -126,7 +132,8 @@ static int mirror_owner(const char *git_base, const struct github_cfg *cfg,
 
 			const struct repo_ctx repo = {
 					.git_base = git_base,
-					.cfg = cfg,
+					.owner = cfg->owner,
+					.token = cfg->token,
 					.name = res.repos[i].name,
 					.url = res.repos[i].url,
 					.username = login,
@@ -141,14 +148,71 @@ static int mirror_owner(const char *git_base, const struct github_cfg *cfg,
 		free(end_cursor);
 		end_cursor = strdup(res.end_cursor);
 
-		list_repos_res_free(res);
+		gh_list_repos_res_free(res);
 	} while (res.has_next_page);
 
 	free(end_cursor);
 	free(login);
-	github_client_free(client);
+	gql_client_free(client);
 	return status;
 }
+
+static int mirror_srht(const char *git_base, const struct srht_cfg *cfg,
+		       int quiet)
+{
+	if (!quiet)
+		printf("Mirroring sr.ht owner: %s\n", cfg->owner);
+
+	const struct gql_ctx ctx = {
+			.endpoint = cfg->endpoint,
+			.token = cfg->token,
+			.user_agent = cfg->user_agent,
+	};
+	gql_client *client = gql_client_new(ctx);
+	if (!client) {
+		fprintf(stderr, "Failed to create sr.ht client\n");
+		return 1;
+	}
+
+	struct srht_list_repos_res res;
+	char *cursor = NULL;
+	int status = 0;
+	do {
+		if (srht_list_user_repos(client, cfg->owner, cursor, &res))
+			return -1;
+
+		for (size_t i = 0; i < res.repos_len; i++) {
+			if (!quiet)
+				printf("Repo: %s\t%s\n", res.repos[i].name,
+				       res.repos[i].url);
+
+			const struct repo_ctx repo = {
+					.git_base = git_base,
+					.owner = res.canonical_name,
+					.token = cfg->token,
+					.name = res.repos[i].name,
+					.url = res.repos[i].url,
+					.username = res.canonical_name,
+			};
+			if (git_mirror_repo(&repo, quiet) != 0) {
+				fprintf(stderr, "Failed to mirror repo\n");
+				status = -1;
+				break;
+			}
+		}
+
+		if (res.cursor) {
+			free(cursor);
+			cursor = strdup(res.cursor);
+		}
+		srht_list_repos_res_free(res);
+	} while (res.cursor != NULL);
+
+	free(cursor);
+	gql_client_free(client);
+	return status;
+}
+
 
 int main(int argc, char **argv)
 {
@@ -167,16 +231,28 @@ int main(int argc, char **argv)
 	}
 
 	int status = 0;
-	const struct github_cfg *owner = cfg->head;
-	while (owner) {
-		if (!cfg->quiet)
-			printf("Mirroring owner: %s\n", owner->owner);
-		if (mirror_owner(cfg->git_base, owner, cfg->quiet)) {
-			fprintf(stderr, "Failed to mirror owner: %s\n",
-				owner->owner);
-			status = 1;
+	const struct remote_cfg *remote = cfg->head;
+	while (remote) {
+		switch (remote->type) {
+		case remote_type_github:
+			if (mirror_github(cfg->git_base, &remote->gh,
+					  cfg->quiet)) {
+				fprintf(stderr, "Failed to mirror owner: %s\n",
+					remote->gh.owner);
+				status = 1;
+			}
+			break;
+		case remote_type_srht:
+			if (mirror_srht(cfg->git_base, &remote->srht,
+					cfg->quiet)) {
+				fprintf(stderr,
+					"Failed to mirror sr.ht owner: %s\n",
+					remote->srht.owner);
+				status = 1;
+			}
+			break;
 		}
-		owner = owner->next;
+		remote = remote->next;
 	}
 
 	config_free(cfg);

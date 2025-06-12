@@ -1,0 +1,11 @@
+query GetUserRepos($username: String!, $cursor: Cursor) {
+    user(username: $username) {
+        canonicalName
+        repositories(filter: { count: 10 }, cursor: $cursor) {
+            cursor
+            results {
+                name
+            }
+        }
+    }
+}

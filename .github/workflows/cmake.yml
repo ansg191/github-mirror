@@ -21,9 +21,12 @@ jobs:
       #
       # To add more build types (Release, Debug, RelWithDebInfo, etc.) customize the build_type list.
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, macos-latest]
         build_type: [Debug]
         c_compiler: [gcc, clang]
+        exclude:
+          - os: macos-latest
+            c_compiler: gcc
 
     steps:
       - uses: actions/checkout@v4
@@ -36,12 +39,21 @@ jobs:
           echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
 
       - name: Install deps
+        if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             libcurl4-openssl-dev \
             libcmocka-dev \
             libcjson-dev
+
+      - name: Install deps
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install cmake \
+            curl \
+            cmocka \
+            cjson
 
       - name: Configure CMake
         # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.

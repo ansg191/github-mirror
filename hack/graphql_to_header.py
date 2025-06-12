@@ -8,6 +8,7 @@ var_name = sys.argv[3]
 with input_path.open() as f:
     lines = f.readlines()
 
+output_path.parent.mkdir(parents=True, exist_ok=True)
 with output_path.open("w") as f:
     f.write(
         f'''#ifndef QUERIES_{var_name.upper()}_H

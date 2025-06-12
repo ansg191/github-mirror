@@ -9,7 +9,8 @@
 
 struct repo_ctx {
 	const char *git_base;
-	const struct github_cfg *cfg;
+	const char *owner;
+	const char *token;
 
 	/// Name of the repo
 	const char *name;
