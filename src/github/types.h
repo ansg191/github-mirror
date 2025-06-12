@@ -9,7 +9,7 @@
 
 char *identity_from_json(const cJSON *root);
 
-struct list_repos_res {
+struct gh_list_repos_res {
 	int has_next_page;
 	char *end_cursor;
 
@@ -23,7 +23,7 @@ struct list_repos_res {
 	size_t repos_len;
 };
 
-int list_repos_from_json(cJSON *root, struct list_repos_res *res);
-void list_repos_res_free(struct list_repos_res res);
+int gh_list_repos_from_json(cJSON *root, struct gh_list_repos_res *res);
+void gh_list_repos_res_free(struct gh_list_repos_res res);
 
 #endif // GITHUB_TYPES_H

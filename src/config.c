@@ -30,6 +30,7 @@ const char *config_locations[] = {
 enum config_section {
 	section_none,
 	section_github,
+	section_srht,
 	section_git,
 };
 
@@ -89,7 +90,7 @@ static char *trim(char *start, char *end)
  * Parse a token value from the config file.
  * If the token is a file path, read the file and set the token to its contents.
  * If not a file path, the raw token value is checked for validity.
- * It then checks that the token starts with:
+ * If it is a github token, it then checks that the token starts with:
  *	- "ghp_"
  *	- "gho_"
  *	- "ghu_"
@@ -99,7 +100,7 @@ static char *trim(char *start, char *end)
  * @param value token value
  * @return Owned token value or NULL on error
  */
-static char *parse_token(char *value)
+static char *parse_token(char *value, enum remote_type tp)
 {
 	char *token = NULL;
 
@@ -146,6 +147,8 @@ static char *parse_token(char *value)
 	close(fd);
 
 token_check:
+	if (tp == remote_type_srht)
+		return token;
 	if (!strncmp(token, "ghp_", 4) || !strncmp(token, "gho_", 4) ||
 	    !strncmp(token, "ghu_", 4) || !strncmp(token, "ghs_", 4) ||
 	    !strncmp(token, "ghf_", 4) || !strncmp(token, "github_pat_", 11)) {
@@ -182,15 +185,16 @@ static int parse_line_inner(struct config *cfg, enum config_section section,
 		return -1;
 	case section_github:
 		if (!strcmp(key, "endpoint"))
-			cfg->head->endpoint = value;
+			cfg->head->gh.endpoint = value;
 		else if (!strcmp(key, "token")) {
-			cfg->head->token = parse_token(value);
+			cfg->head->gh.token =
+					parse_token(value, cfg->head->type);
 		} else if (!strcmp(key, "user_agent"))
-			cfg->head->user_agent = value;
+			cfg->head->gh.user_agent = value;
 		else if (!strcmp(key, "owner"))
-			cfg->head->owner = value;
+			cfg->head->gh.owner = value;
 		else if (!strcmp(key, "skip-forks")) {
-			if (parse_bool(value, &cfg->head->skip_forks) < 0) {
+			if (parse_bool(value, &cfg->head->gh.skip_forks) < 0) {
 				fprintf(stderr,
 					"Error parsing config file: "
 					"invalid value for skip-forks: %s\n",
@@ -198,13 +202,31 @@ static int parse_line_inner(struct config *cfg, enum config_section section,
 				return -1;
 			}
 		} else if (!strcmp(key, "skip-private")) {
-			if (parse_bool(value, &cfg->head->skip_private) < 0) {
+			if (parse_bool(value, &cfg->head->gh.skip_private) <
+			    0) {
 				fprintf(stderr,
 					"Error parsing config file: "
 					"invalid value for skip-private: %s\n",
 					value);
 				return -1;
 			}
+		} else {
+			fprintf(stderr,
+				"Error parsing config file: unknown key: %s\n",
+				key);
+			return -1;
+		}
+		break;
+	case section_srht:
+		if (!strcmp(key, "endpoint"))
+			cfg->head->srht.endpoint = value;
+		else if (!strcmp(key, "token")) {
+			cfg->head->srht.token =
+					parse_token(value, cfg->head->type);
+		} else if (!strcmp(key, "user_agent")) {
+			cfg->head->srht.user_agent = value;
+		} else if (!strcmp(key, "owner")) {
+			cfg->head->srht.owner = value;
 		} else {
 			fprintf(stderr,
 				"Error parsing config file: unknown key: %s\n",
@@ -250,16 +272,31 @@ static int parse_line(struct config *cfg, char *line,
 		if (!strcmp(section_name, "github")) {
 			*section = section_github;
 
-			// Add the new owner to the list
-			struct github_cfg *owner = calloc(1, sizeof(*owner));
-			if (!owner) {
+			// Add the new remote to the list
+			struct remote_cfg *remote = calloc(1, sizeof(*remote));
+			if (!remote) {
 				perror("Error allocating owner");
 				return -1;
 			}
-			owner->endpoint = GH_DEFAULT_ENDPOINT;
-			owner->user_agent = GH_DEFAULT_USER_AGENT;
-			owner->next = cfg->head;
-			cfg->head = owner;
+			remote->type = remote_type_github;
+			remote->gh.endpoint = GH_DEFAULT_ENDPOINT;
+			remote->gh.user_agent = DEFAULT_USER_AGENT;
+			remote->next = cfg->head;
+			cfg->head = remote;
+		} else if (!strcmp(section_name, "srht")) {
+			*section = section_srht;
+
+			// Add the new remote to the list
+			struct remote_cfg *remote = calloc(1, sizeof(*remote));
+			if (!remote) {
+				perror("Error allocating owner");
+				return -1;
+			}
+			remote->type = remote_type_srht;
+			remote->srht.endpoint = SRHT_DEFAULT_ENDPOINT;
+			remote->srht.user_agent = DEFAULT_USER_AGENT;
+			remote->next = cfg->head;
+			cfg->head = remote;
 		} else if (!strcmp(section_name, "git"))
 			*section = section_git;
 		else {
@@ -329,21 +366,52 @@ static void config_defaults(struct config *cfg)
 	cfg->git_base = "/srv/git";
 }
 
+static int github_cfg_validate(const struct github_cfg *cfg)
+{
+	if (!cfg->token) {
+		fprintf(stderr, "Error: missing required field: "
+				"github.token\n");
+		return -1;
+	}
+	if (!cfg->owner) {
+		fprintf(stderr, "Error: missing required field: "
+				"github.owner\n");
+		return -1;
+	}
+	return 0;
+}
+
+static int srht_cfg_validate(const struct srht_cfg *cfg)
+{
+	if (!cfg->token) {
+		fprintf(stderr, "Error: missing required field: "
+				"srht.token\n");
+		return -1;
+	}
+
+	if (!cfg->owner) {
+		fprintf(stderr, "Error: missing required field: "
+				"srht.owner\n");
+		return -1;
+	}
+	return 0;
+}
+
 static int config_validate(const struct config *cfg)
 {
-	const struct github_cfg *owner = cfg->head;
-	while (owner) {
-		if (!owner->token) {
-			fprintf(stderr, "Error: missing required field: "
-					"github.token\n");
-			return -1;
+	const struct remote_cfg *remote = cfg->head;
+	while (remote) {
+		switch (remote->type) {
+		case remote_type_github:
+			if (github_cfg_validate(&remote->gh) < 0)
+				return -1;
+			break;
+		case remote_type_srht:
+			if (srht_cfg_validate(&remote->srht) < 0)
+				return -1;
+			break;
 		}
-		if (!owner->owner) {
-			fprintf(stderr, "Error: missing required field: "
-					"github.owner\n");
-			return -1;
-		}
-		owner = owner->next;
+		remote = remote->next;
 	}
 	return 0;
 }
@@ -380,17 +448,29 @@ fail:
 	return NULL;
 }
 
+static void remote_cfg_free(struct remote_cfg *remote)
+{
+	switch (remote->type) {
+	case remote_type_github:
+		free((char *) remote->gh.token);
+		break;
+	case remote_type_srht:
+		free((char *) remote->srht.token);
+		break;
+	}
+}
+
 void config_free(struct config *config)
 {
 	if (!config || !config->contents)
 		return;
 	munmap(config->contents, config->contents_len);
 
-	// Free the github_cfg list
-	struct github_cfg *owner = config->head;
+	// Free the remote_cfg list
+	struct remote_cfg *owner = config->head;
 	while (owner) {
-		struct github_cfg *next = owner->next;
-		free((char *) owner->token);
+		struct remote_cfg *next = owner->next;
+		remote_cfg_free(owner);
 		free(owner);
 		owner = next;
 	}

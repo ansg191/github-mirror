@@ -1,7 +1,8 @@
 config.ini
 tmp/
-queries/schema.graphql
-queries/graphql.config.yml
+queries/**/schema.graphql
+queries/**/schema.graphqls
+queries/**/graphql.config.yml
 
 # Created by https://www.toptal.com/developers/gitignore/api/c,cmake,macos,windows,linux,intellij+all,visualstudiocode
 # Edit at https://www.toptal.com/developers/gitignore?templates=c,cmake,macos,windows,linux,intellij+all,visualstudiocode

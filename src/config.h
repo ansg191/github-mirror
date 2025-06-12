@@ -8,7 +8,8 @@
 #include <stdlib.h>
 
 #define GH_DEFAULT_ENDPOINT "https://api.github.com/graphql"
-#define GH_DEFAULT_USER_AGENT "github-mirror/" GITHUB_MIRROR_VERSION
+#define SRHT_DEFAULT_ENDPOINT "https://git.sr.ht/query"
+#define DEFAULT_USER_AGENT "github-mirror/" GITHUB_MIRROR_VERSION
 
 extern const char *config_locations[];
 
@@ -29,8 +30,34 @@ struct github_cfg {
 	// Owned
 	/// Github auth token
 	const char *token;
-	/// Next owner in the list
-	struct github_cfg *next;
+};
+
+struct srht_cfg {
+	// Borrowed
+	/// SourceHut graphql API endpoint
+	const char *endpoint;
+	/// Client user agent
+	const char *user_agent;
+	/// The owner of the repositories
+	const char *owner;
+
+	// Owned
+	const char *token;
+};
+
+enum remote_type {
+	remote_type_github,
+	remote_type_srht,
+};
+
+struct remote_cfg {
+	enum remote_type type;
+	union {
+		struct github_cfg gh;
+		struct srht_cfg srht;
+	};
+	/// Next remote in the list
+	struct remote_cfg *next;
 };
 
 struct config {
@@ -42,7 +69,7 @@ struct config {
 	int quiet;
 
 	/// Repo owners to mirror
-	struct github_cfg *head;
+	struct remote_cfg *head;
 
 	/// The filepath to the git mirrors
 	/// Default: /srv/git

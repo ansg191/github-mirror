@@ -36,14 +36,16 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
 # GraphQL Queries
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include)
-file(GLOB GRAPHQL_FILES "${CMAKE_CURRENT_SOURCE_DIR}/queries/*.graphql")
+file(GLOB_RECURSE GRAPHQL_FILES "${CMAKE_CURRENT_SOURCE_DIR}/queries/*.graphql")
 set(GENERATED_HEADERS "")
 
 foreach (GQL_FILE ${GRAPHQL_FILES})
     get_filename_component(FILENAME ${GQL_FILE} NAME)
     if (NOT FILENAME STREQUAL "schema.graphql")
+        get_filename_component(DIR ${GQL_FILE} DIRECTORY)
+        get_filename_component(DIR ${DIR} NAME)
         get_filename_component(BASENAME ${GQL_FILE} NAME_WE)
-        set(HEADER_FILE "${CMAKE_CURRENT_SOURCE_DIR}/include/queries/${BASENAME}.h")
+        set(HEADER_FILE "${CMAKE_CURRENT_SOURCE_DIR}/include/queries/${DIR}/${BASENAME}.h")
         add_custom_command(
                 OUTPUT ${HEADER_FILE}
                 COMMAND ${Python3_EXECUTABLE}
@@ -63,19 +65,16 @@ add_custom_target(generate_graphql_headers ALL DEPENDS ${GENERATED_HEADERS})
 # Executable
 add_executable(github-mirror
         src/main.c
-        src/github.c
-        src/github.h
         src/buffer.c
-        src/buffer.h
-        ${GENERATED_HEADERS}
-        src/github_types.h
-        src/github_types.c
         src/config.c
-        src/config.h
+        src/client.c
         src/git.c
-        src/git.h
         src/precheck.c
-        src/precheck.h
+        src/github/client.c
+        src/github/types.c
+        src/srht/client.c
+        src/srht/types.c
+        ${GENERATED_HEADERS}
 )
 target_link_libraries(github-mirror PRIVATE cjson CURL::libcurl)
 target_include_directories(github-mirror PRIVATE ${CJSON_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -111,14 +110,22 @@ install(FILES ${MANPAGES} DESTINATION share/man/man5)
 enable_testing()
 
 add_executable(test_buffer tests/test_buffer.c src/buffer.c)
-target_link_libraries(test_buffer PRIVATE ${CMOCKA_LIBRARIES})
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    target_link_libraries(test_buffer PRIVATE cmocka::cmocka)
+else ()
+    target_link_libraries(test_buffer PRIVATE ${CMOCKA_LIBRARIES})
+endif ()
 target_compile_definitions(test_buffer PRIVATE
         TEST_ALLOC
         GITHUB_MIRROR_VERSION="${PROJECT_VERSION}"
 )
 
 add_executable(test_config tests/test_config.c src/config.c)
-target_link_libraries(test_config PRIVATE ${CMOCKA_LIBRARIES})
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    target_link_libraries(test_config PRIVATE cmocka::cmocka)
+else ()
+    target_link_libraries(test_config PRIVATE ${CMOCKA_LIBRARIES})
+endif ()
 target_compile_definitions(test_config PRIVATE
         TEST_ALLOC
         GITHUB_MIRROR_VERSION="${PROJECT_VERSION}"

@@ -8,7 +8,7 @@
 
 #include <cjson/cJSON.h>
 
-#include "github_types.h"
+#include "types.h"
 
 
 char *identity_from_json(const cJSON *root)
@@ -32,7 +32,7 @@ char *identity_from_json(const cJSON *root)
 	return strdup(login->valuestring);
 }
 
-int list_repos_from_json(cJSON *root, struct list_repos_res *res)
+int gh_list_repos_from_json(cJSON *root, struct gh_list_repos_res *res)
 {
 	int status = 0;
 	cJSON *repo;
@@ -137,18 +137,19 @@ int list_repos_from_json(cJSON *root, struct list_repos_res *res)
 		res->repos[res->repos_len].name = strdup(name->valuestring);
 		res->repos[res->repos_len].url = strdup(url->valuestring);
 		res->repos[res->repos_len].is_fork = cJSON_IsTrue(is_fork);
-		res->repos[res->repos_len].is_private = cJSON_IsTrue(is_private);
+		res->repos[res->repos_len].is_private =
+				cJSON_IsTrue(is_private);
 		res->repos_len++;
 	}
 
 end:
 	cJSON_Delete(root);
 	if (status != 0)
-		list_repos_res_free(*res);
+		gh_list_repos_res_free(*res);
 	return status;
 }
 
-void list_repos_res_free(struct list_repos_res res)
+void gh_list_repos_res_free(struct gh_list_repos_res res)
 {
 	free(res.end_cursor);
 	for (size_t i = 0; i < res.repos_len; i++) {
