@@ -126,16 +126,20 @@ static int mirror_github(const char *git_base, const struct github_cfg *cfg,
 				continue;
 			}
 
+			const char *url = cfg->transport == git_transport_ssh
+							  ? res.repos[i].ssh_url
+							  : res.repos[i].url;
+
 			if (!quiet)
 				printf("Repo: %s\t%s\n", res.repos[i].name,
-				       res.repos[i].url);
+				       url);
 
 			const struct repo_ctx repo = {
 					.git_base = git_base,
 					.owner = cfg->owner,
 					.token = cfg->token,
 					.name = res.repos[i].name,
-					.url = res.repos[i].url,
+					.url = url,
 					.username = login,
 			};
 			if (git_mirror_repo(&repo, quiet) != 0) {

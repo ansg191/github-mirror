@@ -4,6 +4,7 @@ query GetUserRepos($username: String!, $after: String) {
             nodes {
                 name
                 url
+                sshUrl
                 isFork
                 isPrivate
             }
