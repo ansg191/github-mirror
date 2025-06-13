@@ -13,11 +13,18 @@
 
 extern const char *config_locations[];
 
+enum git_transport {
+	git_transport_https,
+	git_transport_ssh,
+};
+
 struct github_cfg {
 	/// Whether to skip mirroring fork repositories
 	int skip_forks;
 	/// Whether to skip mirroring private repositories
 	int skip_private;
+	/// Transport protocol to use for mirroring
+	enum git_transport transport;
 
 	// Borrowed
 	/// Github graphql API endpoint

@@ -29,6 +29,7 @@ static void config_read_normal(void **state)
 
 	assert_non_null(cfg->head);
 	assert_int_equal(cfg->head->type, remote_type_github);
+	assert_int_equal(cfg->head->gh.transport, git_transport_ssh);
 	assert_string_equal(cfg->head->gh.endpoint,
 			    "https://api.github.com/graphql");
 	assert_string_equal(cfg->head->gh.token, "ghp_1234567890abcdef");

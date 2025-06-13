@@ -251,6 +251,62 @@ static int create_git_path(const struct repo_ctx *ctx)
 }
 
 /**
+ * Updates the mirror URL of the git repository at the specified path.
+ * @param path Full path to the git repository
+ * @param ctx Context containing the repository information
+ * @return 0 on success, -1 on error
+ */
+static int update_mirror_url(const char *path, const struct repo_ctx *ctx)
+{
+	// Prepare the URL
+	char *url = prepare_git_url(ctx->url, ctx->username, ctx->token);
+	if (!url) {
+		perror("prepare_git_url");
+		return -1;
+	}
+
+	const pid_t pid = fork();
+	if (pid < 0) {
+		perror("fork");
+		return -1;
+	}
+
+	if (pid == 0) {
+		// Child process
+		char *args[8];
+		int i = 0;
+		args[i++] = "git";
+		args[i++] = "--git-dir";
+		args[i++] = (char *) path;
+		args[i++] = "remote";
+		args[i++] = "set-url";
+		args[i++] = "origin";
+		args[i++] = url;
+		args[i] = NULL;
+
+		execvp("git", args);
+		perror("execvp");
+		_exit(127); // execvp only returns on error
+	}
+	free(url);
+
+	int status;
+	pid_t result;
+	while ((result = waitpid(pid, &status, 0)) == -1 && errno == EINTR) {
+	}
+	if (result == -1) {
+		perror("waitpid");
+		return -1;
+	}
+
+	if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
+		return 0; // Success
+	fprintf(stderr, "Error: git remote set-url failed with status %d\n",
+		WEXITSTATUS(status));
+	return -1; // Error occurred
+}
+
+/**
  * Updates the git repository at the specified path from the remote.
  * @param path Full path to the git repository
  * @param quiet Suppress output if non-zero
@@ -314,6 +370,11 @@ int git_mirror_repo(const struct repo_ctx *ctx, int quiet)
 		// Repo exists, so we can just update it
 		if (!quiet)
 			printf("Repo already exists, updating...\n");
+		if (update_mirror_url(path, ctx) == -1) {
+			perror("update_mirror_url");
+			ret = -1;
+			goto end;
+		}
 		if (update_mirror(path, quiet) == -1) {
 			perror("update_mirror");
 			ret = -1;

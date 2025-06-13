@@ -210,6 +210,18 @@ static int parse_line_inner(struct config *cfg, enum config_section section,
 					value);
 				return -1;
 			}
+		} else if (!strcmp(key, "transport")) {
+			if (!strcmp(value, "ssh"))
+				cfg->head->gh.transport = git_transport_ssh;
+			else if (!strcmp(value, "https"))
+				cfg->head->gh.transport = git_transport_https;
+			else {
+				fprintf(stderr,
+					"Error parsing config file: "
+					"invalid value for transport: %s\n",
+					value);
+				return -1;
+			}
 		} else {
 			fprintf(stderr,
 				"Error parsing config file: unknown key: %s\n",
@@ -281,6 +293,7 @@ static int parse_line(struct config *cfg, char *line,
 			remote->type = remote_type_github;
 			remote->gh.endpoint = GH_DEFAULT_ENDPOINT;
 			remote->gh.user_agent = DEFAULT_USER_AGENT;
+			remote->gh.transport = git_transport_https;
 			remote->next = cfg->head;
 			cfg->head = remote;
 		} else if (!strcmp(section_name, "srht")) {

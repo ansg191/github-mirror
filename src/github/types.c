@@ -119,6 +119,29 @@ int gh_list_repos_from_json(cJSON *root, struct gh_list_repos_res *res)
 			status = -1;
 			goto end;
 		}
+		cJSON *ssh_url_v = cJSON_GetObjectItemCaseSensitive(repo,
+								    "sshUrl");
+		if (!ssh_url_v || !cJSON_IsString(ssh_url_v)) {
+			fprintf(stderr, "Error: sshUrl not found\n");
+			status = -1;
+			goto end;
+		}
+		const char *prefix = "ssh://";
+		char *ssh_url = malloc(strlen(prefix) +
+				       strlen(ssh_url_v->valuestring) + 1);
+		if (!ssh_url) {
+			fprintf(stderr, "Error: malloc failed\n");
+			status = -1;
+			goto end;
+		}
+		strcpy(ssh_url, prefix);
+		strcat(ssh_url, ssh_url_v->valuestring);
+		// Replace 2nd colon with slash
+		char *colon = strchr(ssh_url + strlen(prefix), ':');
+		if (colon)
+			*colon = '/';
+
+
 		cJSON *is_fork = cJSON_GetObjectItemCaseSensitive(repo,
 								  "isFork");
 		if (!is_fork || !cJSON_IsBool(is_fork)) {
@@ -136,6 +159,7 @@ int gh_list_repos_from_json(cJSON *root, struct gh_list_repos_res *res)
 
 		res->repos[res->repos_len].name = strdup(name->valuestring);
 		res->repos[res->repos_len].url = strdup(url->valuestring);
+		res->repos[res->repos_len].ssh_url = ssh_url;
 		res->repos[res->repos_len].is_fork = cJSON_IsTrue(is_fork);
 		res->repos[res->repos_len].is_private =
 				cJSON_IsTrue(is_private);

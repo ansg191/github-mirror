@@ -16,6 +16,7 @@ struct gh_list_repos_res {
 	struct {
 		char *name;
 		char *url;
+		char *ssh_url;
 		int is_fork;
 		int is_private;
 	} *repos;
